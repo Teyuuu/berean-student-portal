@@ -1,0 +1,846 @@
+import { createClient } from '@supabase/supabase-js';
+import {
+  INITIAL_PROGRAMS,
+  INITIAL_ACADEMIC_YEARS,
+  INITIAL_SEMESTERS,
+  INITIAL_YEAR_LEVELS,
+  INITIAL_CURRICULA,
+  INITIAL_SUBJECTS,
+  INITIAL_CURRICULUM_SUBJECTS,
+  INITIAL_ENROLLMENT_PERIODS,
+  INITIAL_PROFILES,
+  INITIAL_STAFF,
+  INITIAL_STUDENTS,
+  INITIAL_ALUMNI_PROFILES,
+  INITIAL_ENROLLMENTS,
+  INITIAL_ENROLLMENT_SUBJECTS,
+  INITIAL_GRADES,
+  INITIAL_ANNOUNCEMENTS,
+  INITIAL_NOTIFICATIONS,
+  INITIAL_AUDIT_LOGS,
+  INITIAL_STUDENT_DOCUMENTS,
+} from './mockData';
+import {
+  Profile,
+  Program,
+  AcademicYear,
+  Semester,
+  YearLevel,
+  Curriculum,
+  Subject,
+  CurriculumSubject,
+  Student,
+  Staff,
+  EnrollmentPeriod,
+  Enrollment,
+  EnrollmentSubject,
+  Grade,
+  StudentDocument,
+  AlumniProfile,
+  Announcement,
+  Notification,
+  AuditLog,
+  StudentStatus,
+  EnrollmentStatus,
+} from '@/types';
+
+// Supabase client initialization
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://mock-berean.supabase.co';
+const supabaseAnonKey =
+  import.meta.env.VITE_SUPABASE_ANON_KEY ||
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+  'mock-anon-key';
+
+export const isLiveSupabaseConfigured =
+  supabaseUrl !== 'https://mock-berean.supabase.co' &&
+  !supabaseUrl.includes('mock') &&
+  supabaseAnonKey.length > 30;
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+  },
+});
+
+// Local state store for standalone execution / seed demo
+class LocalDataStore {
+  private keyPrefix = 'berean_db_';
+
+  private load<T>(key: string, initial: T[]): T[] {
+    try {
+      const data = localStorage.getItem(this.keyPrefix + key);
+      if (data) return JSON.parse(data);
+    } catch {
+      // fallback to initial
+    }
+    return initial;
+  }
+
+  private save<T>(key: string, data: T[]): void {
+    try {
+      localStorage.setItem(this.keyPrefix + key, JSON.stringify(data));
+    } catch {
+      // ignore
+    }
+  }
+
+  public resetToDefaults() {
+    localStorage.clear();
+  }
+
+  // Programs
+  getPrograms(): Program[] {
+    return this.load('programs', INITIAL_PROGRAMS);
+  }
+  savePrograms(items: Program[]) {
+    this.save('programs', items);
+  }
+
+  // Academic Years
+  getAcademicYears(): AcademicYear[] {
+    return this.load('academic_years', INITIAL_ACADEMIC_YEARS);
+  }
+  saveAcademicYears(items: AcademicYear[]) {
+    this.save('academic_years', items);
+  }
+
+  // Semesters
+  getSemesters(): Semester[] {
+    return this.load('semesters', INITIAL_SEMESTERS);
+  }
+
+  // Year Levels
+  getYearLevels(): YearLevel[] {
+    return this.load('year_levels', INITIAL_YEAR_LEVELS);
+  }
+
+  // Curricula
+  getCurricula(): Curriculum[] {
+    return this.load('curricula', INITIAL_CURRICULA);
+  }
+  saveCurricula(items: Curriculum[]) {
+    this.save('curricula', items);
+  }
+
+  // Subjects
+  getSubjects(): Subject[] {
+    const list = this.load('subjects', INITIAL_SUBJECTS);
+    if (list.length < INITIAL_SUBJECTS.length) {
+      this.save('subjects', INITIAL_SUBJECTS);
+      return INITIAL_SUBJECTS;
+    }
+    return list;
+  }
+  saveSubjects(items: Subject[]) {
+    this.save('subjects', items);
+  }
+
+  // Curriculum Subjects
+  getCurriculumSubjects(): CurriculumSubject[] {
+    const list = this.load('curriculum_subjects', INITIAL_CURRICULUM_SUBJECTS);
+    if (list.length < INITIAL_CURRICULUM_SUBJECTS.length) {
+      this.save('curriculum_subjects', INITIAL_CURRICULUM_SUBJECTS);
+      return INITIAL_CURRICULUM_SUBJECTS;
+    }
+    return list;
+  }
+  saveCurriculumSubjects(items: CurriculumSubject[]) {
+    this.save('curriculum_subjects', items);
+  }
+
+  // Enrollment Periods
+  getEnrollmentPeriods(): EnrollmentPeriod[] {
+    return this.load('enrollment_periods', INITIAL_ENROLLMENT_PERIODS);
+  }
+  saveEnrollmentPeriods(items: EnrollmentPeriod[]) {
+    this.save('enrollment_periods', items);
+  }
+
+  // Profiles
+  getProfiles(): Profile[] {
+    return this.load('profiles', INITIAL_PROFILES);
+  }
+  saveProfiles(items: Profile[]) {
+    this.save('profiles', items);
+  }
+
+  // Staff
+  getStaff(): Staff[] {
+    return this.load('staff', INITIAL_STAFF);
+  }
+
+  // Students
+  getStudents(): Student[] {
+    return this.load('students', INITIAL_STUDENTS);
+  }
+  saveStudents(items: Student[]) {
+    this.save('students', items);
+  }
+
+  // Alumni
+  getAlumniProfiles(): AlumniProfile[] {
+    return this.load('alumni_profiles', INITIAL_ALUMNI_PROFILES);
+  }
+  saveAlumniProfiles(items: AlumniProfile[]) {
+    this.save('alumni_profiles', items);
+  }
+
+  // Enrollments
+  getEnrollments(): Enrollment[] {
+    return this.load('enrollments', INITIAL_ENROLLMENTS);
+  }
+  saveEnrollments(items: Enrollment[]) {
+    this.save('enrollments', items);
+  }
+
+  // Enrollment Subjects
+  getEnrollmentSubjects(): EnrollmentSubject[] {
+    return this.load('enrollment_subjects', INITIAL_ENROLLMENT_SUBJECTS);
+  }
+  saveEnrollmentSubjects(items: EnrollmentSubject[]) {
+    this.save('enrollment_subjects', items);
+  }
+
+  // Grades
+  getGrades(): Grade[] {
+    return this.load('grades', INITIAL_GRADES);
+  }
+  saveGrades(items: Grade[]) {
+    this.save('grades', items);
+  }
+
+  // Student Documents
+  getDocuments(): StudentDocument[] {
+    return this.load('student_documents', INITIAL_STUDENT_DOCUMENTS);
+  }
+  saveDocuments(items: StudentDocument[]) {
+    this.save('student_documents', items);
+  }
+
+  // Announcements
+  getAnnouncements(): Announcement[] {
+    return this.load('announcements', INITIAL_ANNOUNCEMENTS);
+  }
+  saveAnnouncements(items: Announcement[]) {
+    this.save('announcements', items);
+  }
+
+  // Notifications
+  getNotifications(): Notification[] {
+    return this.load('notifications', INITIAL_NOTIFICATIONS);
+  }
+  saveNotifications(items: Notification[]) {
+    this.save('notifications', items);
+  }
+
+  // Audit Logs
+  getAuditLogs(): AuditLog[] {
+    return this.load('audit_logs', INITIAL_AUDIT_LOGS);
+  }
+  saveAuditLogs(items: AuditLog[]) {
+    this.save('audit_logs', items);
+  }
+}
+
+export const localStore = new LocalDataStore();
+
+// Unified API Service
+export const api = {
+  // Programs
+  async getPrograms(): Promise<Program[]> {
+    if (isLiveSupabaseConfigured) {
+      const { data, error } = await supabase.from('programs').select('*').order('code');
+      if (!error && data) return data as Program[];
+    }
+    return localStore.getPrograms();
+  },
+
+  async createProgram(program: Omit<Program, 'id' | 'created_at' | 'updated_at'>): Promise<Program> {
+    const newProg: Program = {
+      ...program,
+      id: crypto.randomUUID(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    if (isLiveSupabaseConfigured) {
+      const { data, error } = await supabase.from('programs').insert(newProg).select().single();
+      if (!error && data) return data as Program;
+    }
+    const current = localStore.getPrograms();
+    localStore.savePrograms([...current, newProg]);
+    return newProg;
+  },
+
+  async updateProgram(id: string, updates: Partial<Program>): Promise<Program> {
+    if (isLiveSupabaseConfigured) {
+      const { data, error } = await supabase
+        .from('programs')
+        .update({ ...updates, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .select()
+        .single();
+      if (!error && data) return data as Program;
+    }
+    const current = localStore.getPrograms();
+    const updated = current.map((p) => (p.id === id ? { ...p, ...updates, updated_at: new Date().toISOString() } : p));
+    localStore.savePrograms(updated);
+    return updated.find((p) => p.id === id)!;
+  },
+
+  // Academic Years
+  async getAcademicYears(): Promise<AcademicYear[]> {
+    if (isLiveSupabaseConfigured) {
+      const { data, error } = await supabase.from('academic_years').select('*').order('name', { ascending: false });
+      if (!error && data) return data as AcademicYear[];
+    }
+    return localStore.getAcademicYears();
+  },
+
+  async createAcademicYear(ay: Omit<AcademicYear, 'id' | 'created_at' | 'updated_at'>): Promise<AcademicYear> {
+    const newAy: AcademicYear = {
+      ...ay,
+      id: crypto.randomUUID(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    if (isLiveSupabaseConfigured) {
+      const { data, error } = await supabase.from('academic_years').insert(newAy).select().single();
+      if (!error && data) return data as AcademicYear;
+    }
+    const current = localStore.getAcademicYears();
+    // If marked current, clear other current flags
+    const updated = ay.is_current ? current.map((item) => ({ ...item, is_current: false })) : current;
+    localStore.saveAcademicYears([...updated, newAy]);
+    return newAy;
+  },
+
+  async setCurrentAcademicYear(id: string): Promise<void> {
+    if (isLiveSupabaseConfigured) {
+      await supabase.from('academic_years').update({ is_current: false }).neq('id', id);
+      await supabase.from('academic_years').update({ is_current: true }).eq('id', id);
+      return;
+    }
+    const current = localStore.getAcademicYears();
+    const updated = current.map((ay) => ({ ...ay, is_current: ay.id === id }));
+    localStore.saveAcademicYears(updated);
+  },
+
+  // Semesters & Year Levels
+  async getSemesters(): Promise<Semester[]> {
+    if (isLiveSupabaseConfigured) {
+      const { data, error } = await supabase.from('semesters').select('*').order('sequence');
+      if (!error && data) return data as Semester[];
+    }
+    return localStore.getSemesters();
+  },
+
+  async getYearLevels(): Promise<YearLevel[]> {
+    if (isLiveSupabaseConfigured) {
+      const { data, error } = await supabase.from('year_levels').select('*').order('level_number');
+      if (!error && data) return data as YearLevel[];
+    }
+    return localStore.getYearLevels();
+  },
+
+  // Subjects
+  async getSubjects(): Promise<Subject[]> {
+    if (isLiveSupabaseConfigured) {
+      const { data, error } = await supabase.from('subjects').select('*').order('code');
+      if (!error && data) return data as Subject[];
+    }
+    return localStore.getSubjects();
+  },
+
+  async createSubject(subject: Omit<Subject, 'id' | 'created_at' | 'updated_at'>): Promise<Subject> {
+    const newSub: Subject = {
+      ...subject,
+      id: crypto.randomUUID(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    if (isLiveSupabaseConfigured) {
+      const { data, error } = await supabase.from('subjects').insert(newSub).select().single();
+      if (!error && data) return data as Subject;
+    }
+    const current = localStore.getSubjects();
+    localStore.saveSubjects([...current, newSub]);
+    return newSub;
+  },
+
+  async updateSubject(id: string, updates: Partial<Subject>): Promise<Subject> {
+    if (isLiveSupabaseConfigured) {
+      const { data, error } = await supabase
+        .from('subjects')
+        .update({ ...updates, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .select()
+        .single();
+      if (!error && data) return data as Subject;
+    }
+    const current = localStore.getSubjects();
+    const updated = current.map((s) => (s.id === id ? { ...s, ...updates, updated_at: new Date().toISOString() } : s));
+    localStore.saveSubjects(updated);
+    return updated.find((s) => s.id === id)!;
+  },
+
+  // Curricula & Curriculum Subjects
+  async getCurricula(): Promise<Curriculum[]> {
+    const curricula = localStore.getCurricula();
+    const programs = localStore.getPrograms();
+    return curricula.map((c) => ({
+      ...c,
+      program: programs.find((p) => p.id === c.program_id),
+    }));
+  },
+
+  async createCurriculum(curr: Omit<Curriculum, 'id' | 'created_at' | 'updated_at'>): Promise<Curriculum> {
+    const newCurr: Curriculum = {
+      ...curr,
+      id: crypto.randomUUID(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    const current = localStore.getCurricula();
+    localStore.saveCurricula([...current, newCurr]);
+    return newCurr;
+  },
+
+  async getCurriculumSubjects(curriculumId: string): Promise<CurriculumSubject[]> {
+    const csList = localStore.getCurriculumSubjects().filter((cs) => cs.curriculum_id === curriculumId);
+    const subjects = localStore.getSubjects();
+    const yearLevels = localStore.getYearLevels();
+    const semesters = localStore.getSemesters();
+
+    return csList.map((cs) => ({
+      ...cs,
+      subject: subjects.find((s) => s.id === cs.subject_id),
+      prerequisite_subject: subjects.find((s) => s.id === cs.prerequisite_subject_id) || null,
+      year_level: yearLevels.find((y) => y.id === cs.year_level_id),
+      semester: semesters.find((s) => s.id === cs.semester_id),
+    }));
+  },
+
+  async addCurriculumSubject(cs: Omit<CurriculumSubject, 'id' | 'created_at' | 'updated_at'>): Promise<CurriculumSubject> {
+    const newCs: CurriculumSubject = {
+      ...cs,
+      id: crypto.randomUUID(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    const current = localStore.getCurriculumSubjects();
+    localStore.saveCurriculumSubjects([...current, newCs]);
+    return newCs;
+  },
+
+  async removeCurriculumSubject(id: string): Promise<void> {
+    const current = localStore.getCurriculumSubjects();
+    localStore.saveCurriculumSubjects(current.filter((c) => c.id !== id));
+  },
+
+  // Enrollment Periods
+  async getEnrollmentPeriods(): Promise<EnrollmentPeriod[]> {
+    const periods = localStore.getEnrollmentPeriods();
+    const ays = localStore.getAcademicYears();
+    const sems = localStore.getSemesters();
+    return periods.map((ep) => ({
+      ...ep,
+      academic_year: ays.find((a) => a.id === ep.academic_year_id),
+      semester: sems.find((s) => s.id === ep.semester_id),
+    }));
+  },
+
+  async createEnrollmentPeriod(ep: Omit<EnrollmentPeriod, 'id' | 'created_at' | 'updated_at'>): Promise<EnrollmentPeriod> {
+    const newEp: EnrollmentPeriod = {
+      ...ep,
+      id: crypto.randomUUID(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    const current = localStore.getEnrollmentPeriods();
+    localStore.saveEnrollmentPeriods([...current, newEp]);
+    return newEp;
+  },
+
+  async updateEnrollmentPeriodStatus(id: string, status: 'UPCOMING' | 'OPEN' | 'CLOSED'): Promise<void> {
+    const current = localStore.getEnrollmentPeriods();
+    localStore.saveEnrollmentPeriods(
+      current.map((ep) => (ep.id === id ? { ...ep, status, updated_at: new Date().toISOString() } : ep))
+    );
+  },
+
+  // Students & Staff
+  async getStudents(): Promise<Student[]> {
+    const students = localStore.getStudents();
+    const profiles = localStore.getProfiles();
+    const programs = localStore.getPrograms();
+    const curricula = localStore.getCurricula();
+    const yearLevels = localStore.getYearLevels();
+
+    return students.map((s) => ({
+      ...s,
+      profile: profiles.find((p) => p.id === s.profile_id),
+      program: programs.find((p) => p.id === s.program_id),
+      curriculum: curricula.find((c) => c.id === s.curriculum_id),
+      year_level: yearLevels.find((y) => y.id === s.year_level_id),
+    }));
+  },
+
+  async getStudentByProfileId(profileId: string): Promise<Student | null> {
+    const students = await this.getStudents();
+    return students.find((s) => s.profile_id === profileId) || null;
+  },
+
+  async updateStudentStatus(studentId: string, status: StudentStatus, studentNumber?: string): Promise<Student> {
+    const current = localStore.getStudents();
+    const updated = current.map((s) =>
+      s.id === studentId
+        ? {
+            ...s,
+            student_status: status,
+            student_number: studentNumber || s.student_number,
+            updated_at: new Date().toISOString(),
+          }
+        : s
+    );
+    localStore.saveStudents(updated);
+    const full = await this.getStudents();
+    return full.find((s) => s.id === studentId)!;
+  },
+
+  // Enrollments
+  async getEnrollments(): Promise<Enrollment[]> {
+    const enrollments = localStore.getEnrollments();
+    const students = await this.getStudents();
+    const ays = localStore.getAcademicYears();
+    const sems = localStore.getSemesters();
+    const profiles = localStore.getProfiles();
+    const subjects = localStore.getSubjects();
+    const enrSubjects = localStore.getEnrollmentSubjects();
+
+    return enrollments.map((enr) => ({
+      ...enr,
+      student: students.find((s) => s.id === enr.student_id),
+      academic_year: ays.find((a) => a.id === enr.academic_year_id),
+      semester: sems.find((s) => s.id === enr.semester_id),
+      reviewer_profile: profiles.find((p) => p.id === enr.reviewed_by),
+      enrollment_subjects: enrSubjects
+        .filter((es) => es.enrollment_id === enr.id)
+        .map((es) => ({
+          ...es,
+          subject: subjects.find((s) => s.id === es.subject_id),
+        })),
+    }));
+  },
+
+  async getStudentEnrollments(studentId: string): Promise<Enrollment[]> {
+    const all = await this.getEnrollments();
+    return all.filter((e) => e.student_id === studentId);
+  },
+
+  async submitEnrollment(
+    studentId: string,
+    academicYearId: string,
+    semesterId: string,
+    enrollmentPeriodId: string | null,
+    subjectIds: string[]
+  ): Promise<Enrollment> {
+    const subjects = localStore.getSubjects();
+    const selectedSubjects = subjects.filter((s) => subjectIds.includes(s.id));
+    const totalUnits = selectedSubjects.reduce((acc, curr) => acc + curr.units, 0);
+
+    const enrollmentId = crypto.randomUUID();
+    const newEnr: Enrollment = {
+      id: enrollmentId,
+      student_id: studentId,
+      academic_year_id: academicYearId,
+      semester_id: semesterId,
+      enrollment_period_id: enrollmentPeriodId,
+      status: 'SUBMITTED',
+      total_units: totalUnits,
+      submitted_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    const newEnrSubjects: EnrollmentSubject[] = selectedSubjects.map((s) => ({
+      id: crypto.randomUUID(),
+      enrollment_id: enrollmentId,
+      subject_id: s.id,
+      units: s.units,
+      status: 'ENROLLED',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }));
+
+    // Update students state
+    const currentStudents = localStore.getStudents();
+    localStore.saveStudents(
+      currentStudents.map((st) => (st.id === studentId ? { ...st, student_status: 'ENROLLED' as StudentStatus } : st))
+    );
+
+    // Save enrollments
+    const enrollments = localStore.getEnrollments();
+    localStore.saveEnrollments([...enrollments, newEnr]);
+
+    const enrSubjects = localStore.getEnrollmentSubjects();
+    localStore.saveEnrollmentSubjects([...enrSubjects, ...newEnrSubjects]);
+
+    // Record audit log
+    await this.logAudit('SUBMIT_ENROLLMENT', 'enrollments', enrollmentId, null, newEnr);
+
+    return newEnr;
+  },
+
+  async reviewEnrollment(
+    enrollmentId: string,
+    status: EnrollmentStatus,
+    reviewerId: string,
+    remarks?: string
+  ): Promise<Enrollment> {
+    const enrollments = localStore.getEnrollments();
+    const updated = enrollments.map((e) =>
+      e.id === enrollmentId
+        ? {
+            ...e,
+            status,
+            reviewed_at: new Date().toISOString(),
+            reviewed_by: reviewerId,
+            remarks: remarks || e.remarks,
+            updated_at: new Date().toISOString(),
+          }
+        : e
+    );
+    localStore.saveEnrollments(updated);
+
+    const target = updated.find((e) => e.id === enrollmentId);
+    if (target && status === 'APPROVED') {
+      const students = localStore.getStudents();
+      localStore.saveStudents(
+        students.map((s) => (s.id === target.student_id ? { ...s, student_status: 'ENROLLED' } : s))
+      );
+    }
+
+    await this.logAudit('REVIEW_ENROLLMENT', 'enrollments', enrollmentId, null, { status, remarks });
+    const full = await this.getEnrollments();
+    return full.find((e) => e.id === enrollmentId)!;
+  },
+
+  // Grades & Academic History
+  async getGrades(studentId?: string): Promise<Grade[]> {
+    const grades = localStore.getGrades();
+    const profiles = localStore.getProfiles();
+    const enrSubjects = localStore.getEnrollmentSubjects();
+    const subjects = localStore.getSubjects();
+
+    const filtered = studentId ? grades.filter((g) => g.student_id === studentId) : grades;
+
+    return filtered.map((g) => {
+      const es = enrSubjects.find((item) => item.id === g.enrollment_subject_id);
+      return {
+        ...g,
+        entered_by_profile: profiles.find((p) => p.id === g.entered_by),
+        enrollment_subject: es
+          ? {
+              ...es,
+              subject: subjects.find((s) => s.id === es.subject_id),
+            }
+          : undefined,
+      };
+    });
+  },
+
+  async saveGrade(
+    enrollmentSubjectId: string,
+    studentId: string,
+    gradeVal: number,
+    remarks: string,
+    enteredBy: string,
+    status: 'DRAFT' | 'SUBMITTED' | 'RELEASED' = 'RELEASED'
+  ): Promise<Grade> {
+    const grades = localStore.getGrades();
+    const existing = grades.find((g) => g.enrollment_subject_id === enrollmentSubjectId);
+
+    let result: Grade;
+    if (existing) {
+      result = {
+        ...existing,
+        grade: gradeVal,
+        remarks,
+        status,
+        released_at: status === 'RELEASED' ? new Date().toISOString() : existing.released_at,
+        entered_by: enteredBy,
+        updated_at: new Date().toISOString(),
+      };
+      localStore.saveGrades(grades.map((g) => (g.id === existing.id ? result : g)));
+    } else {
+      result = {
+        id: crypto.randomUUID(),
+        student_id: studentId,
+        enrollment_subject_id: enrollmentSubjectId,
+        grade: gradeVal,
+        remarks,
+        status,
+        released_at: status === 'RELEASED' ? new Date().toISOString() : null,
+        entered_by: enteredBy,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      localStore.saveGrades([...grades, result]);
+    }
+
+    await this.logAudit('ENTER_GRADE', 'grades', result.id, existing, result);
+    return result;
+  },
+
+  // Alumni
+  async getAlumniProfiles(): Promise<AlumniProfile[]> {
+    const alumni = localStore.getAlumniProfiles();
+    const profiles = localStore.getProfiles();
+    const students = await this.getStudents();
+
+    return alumni.map((a) => ({
+      ...a,
+      profile: profiles.find((p) => p.id === a.profile_id),
+      student: students.find((s) => s.id === a.student_id),
+    }));
+  },
+
+  async getAlumniByProfileId(profileId: string): Promise<AlumniProfile | null> {
+    const list = await this.getAlumniProfiles();
+    return list.find((a) => a.profile_id === profileId) || null;
+  },
+
+  async updateAlumniProfile(profileId: string, data: Partial<AlumniProfile>): Promise<AlumniProfile> {
+    const alumni = localStore.getAlumniProfiles();
+    const updated = alumni.map((a) =>
+      a.profile_id === profileId ? { ...a, ...data, updated_at: new Date().toISOString() } : a
+    );
+    localStore.saveAlumniProfiles(updated);
+    const list = await this.getAlumniProfiles();
+    return list.find((a) => a.profile_id === profileId)!;
+  },
+
+  // Student Documents
+  async getStudentDocuments(studentId: string): Promise<StudentDocument[]> {
+    const docs = localStore.getDocuments().filter((d) => d.student_id === studentId);
+    const profiles = localStore.getProfiles();
+    return docs.map((d) => ({
+      ...d,
+      verifier_profile: profiles.find((p) => p.id === d.verified_by),
+    }));
+  },
+
+  async uploadStudentDocument(
+    doc: Omit<StudentDocument, 'id' | 'created_at' | 'updated_at' | 'verification_status'>
+  ): Promise<StudentDocument> {
+    const newDoc: StudentDocument = {
+      ...doc,
+      id: crypto.randomUUID(),
+      verification_status: 'PENDING',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    const current = localStore.getDocuments();
+    localStore.saveDocuments([...current, newDoc]);
+    return newDoc;
+  },
+
+  async verifyDocument(
+    docId: string,
+    status: 'VERIFIED' | 'REJECTED',
+    verifierId: string,
+    remarks?: string
+  ): Promise<void> {
+    const current = localStore.getDocuments();
+    localStore.saveDocuments(
+      current.map((d) =>
+        d.id === docId
+          ? {
+              ...d,
+              verification_status: status,
+              verified_by: verifierId,
+              verified_at: new Date().toISOString(),
+              remarks: remarks || d.remarks,
+              updated_at: new Date().toISOString(),
+            }
+          : d
+      )
+    );
+  },
+
+  // Announcements
+  async getAnnouncements(): Promise<Announcement[]> {
+    const announcements = localStore.getAnnouncements();
+    const profiles = localStore.getProfiles();
+    return announcements
+      .sort((a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime())
+      .map((ann) => ({
+        ...ann,
+        author: profiles.find((p) => p.id === ann.author_id),
+      }));
+  },
+
+  async createAnnouncement(
+    ann: Omit<Announcement, 'id' | 'created_at' | 'updated_at' | 'published_at'>
+  ): Promise<Announcement> {
+    const newAnn: Announcement = {
+      ...ann,
+      id: crypto.randomUUID(),
+      published_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    const current = localStore.getAnnouncements();
+    localStore.saveAnnouncements([newAnn, ...current]);
+    await this.logAudit('CREATE_ANNOUNCEMENT', 'announcements', newAnn.id, null, newAnn);
+    return newAnn;
+  },
+
+  // Notifications
+  async getNotifications(profileId: string): Promise<Notification[]> {
+    return localStore
+      .getNotifications()
+      .filter((n) => n.user_id === profileId)
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  },
+
+  async markNotificationRead(id: string): Promise<void> {
+    const current = localStore.getNotifications();
+    localStore.saveNotifications(
+      current.map((n) => (n.id === id ? { ...n, is_read: true, read_at: new Date().toISOString() } : n))
+    );
+  },
+
+  // Audit Logs
+  async getAuditLogs(): Promise<AuditLog[]> {
+    const logs = localStore.getAuditLogs();
+    const profiles = localStore.getProfiles();
+    return logs
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .map((l) => ({
+        ...l,
+        user: profiles.find((p) => p.id === l.user_id),
+      }));
+  },
+
+  async logAudit(
+    action: string,
+    entity: string,
+    entityId: string | null,
+    previousData: unknown,
+    newData: unknown
+  ): Promise<void> {
+    const newLog: AuditLog = {
+      id: crypto.randomUUID(),
+      action,
+      entity,
+      entity_id: entityId,
+      previous_data: previousData as Record<string, unknown>,
+      new_data: newData as Record<string, unknown>,
+      created_at: new Date().toISOString(),
+    };
+    const logs = localStore.getAuditLogs();
+    localStore.saveAuditLogs([newLog, ...logs]);
+  },
+};
