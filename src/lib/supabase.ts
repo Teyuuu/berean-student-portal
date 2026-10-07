@@ -518,6 +518,234 @@ export const api = {
     return full.find((s) => s.id === studentId)!;
   },
 
+  async registerStudent(data: {
+    student_number: string;
+    full_name: string;
+    email: string;
+    password?: string;
+    program_id?: string;
+    year_level_id?: string;
+    curriculum_id?: string;
+    student_status?: StudentStatus;
+
+    nickname?: string;
+    date_of_birth?: string;
+    age?: number | string;
+    gender?: string;
+    civil_status?: string;
+    nationality?: string;
+    present_address?: string;
+    mobile_no?: string;
+    occupation?: string;
+    business_address?: string;
+    business_tel_no?: string;
+    school_graduated?: string;
+    date_graduated?: string;
+    degree_honors_awards?: string;
+
+    character_reference_name?: string;
+    character_reference_no?: string;
+    emergency_contact_name?: string;
+    emergency_address?: string;
+    emergency_no?: string;
+    emergency_relation?: string;
+
+    home_church?: string;
+    church_address?: string;
+    pastor_name?: string;
+    date_saved?: string;
+    date_baptized?: string;
+    ministries_involved?: string;
+    special_skills?: string;
+    musical_instruments?: string;
+
+    reason_for_enrolling?: string;
+    health_information?: string;
+    brief_testimony?: string;
+  }): Promise<Student> {
+    const parts = data.full_name.trim().split(' ');
+    const firstName = parts[0] || 'Student';
+    const lastName = parts.length > 1 ? parts.slice(1).join(' ') : 'Applicant';
+
+    const newProfileId = crypto.randomUUID();
+    const newStudentId = crypto.randomUUID();
+
+    const newProfile: Profile = {
+      id: newProfileId,
+      id_number: data.student_number || `BBC-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+      first_name: firstName,
+      middle_name: null,
+      last_name: lastName,
+      email: data.email.trim().toLowerCase(),
+      phone: data.mobile_no || null,
+      role: 'STUDENT',
+      profile_photo_url: null,
+      is_active: true,
+      login_status: 'OFFLINE',
+      last_login_at: null,
+      password: data.password || 'Student@Berean2026!',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    const newStudent: Student = {
+      id: newStudentId,
+      profile_id: newProfileId,
+      student_number: data.student_number || newProfile.id_number,
+      program_id: data.program_id || '11111111-1111-1111-1111-111111111101',
+      curriculum_id: data.curriculum_id || '55555555-5555-5555-5555-555555555501',
+      year_level_id: data.year_level_id || '44444444-4444-4444-4444-444444444401',
+      student_status: data.student_status || 'ENROLLED',
+      admission_date: new Date().toISOString().split('T')[0],
+      expected_graduation_date: null,
+      graduation_date: null,
+
+      nickname: data.nickname || null,
+      date_of_birth: data.date_of_birth || null,
+      age: data.age || null,
+      gender: data.gender || null,
+      civil_status: data.civil_status || null,
+      nationality: data.nationality || 'Filipino',
+      present_address: data.present_address || null,
+      mobile_no: data.mobile_no || null,
+      occupation: data.occupation || null,
+      business_address: data.business_address || null,
+      business_tel_no: data.business_tel_no || null,
+      school_graduated: data.school_graduated || null,
+      date_graduated: data.date_graduated || null,
+      degree_honors_awards: data.degree_honors_awards || null,
+
+      character_reference_name: data.character_reference_name || null,
+      character_reference_no: data.character_reference_no || null,
+      emergency_contact_name: data.emergency_contact_name || null,
+      emergency_address: data.emergency_address || null,
+      emergency_no: data.emergency_no || null,
+      emergency_relation: data.emergency_relation || null,
+
+      home_church: data.home_church || null,
+      church_address: data.church_address || null,
+      pastor_name: data.pastor_name || null,
+      date_saved: data.date_saved || null,
+      date_baptized: data.date_baptized || null,
+      ministries_involved: data.ministries_involved || null,
+      special_skills: data.special_skills || null,
+      musical_instruments: data.musical_instruments || null,
+
+      reason_for_enrolling: data.reason_for_enrolling || null,
+      health_information: data.health_information || null,
+      brief_testimony: data.brief_testimony || null,
+
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    // Save profile and student locally
+    const currentProfiles = localStore.getProfiles();
+    localStore.saveProfiles([...currentProfiles, newProfile]);
+
+    const currentStudents = localStore.getStudents();
+    localStore.saveStudents([...currentStudents, newStudent]);
+
+    // Live Supabase sync
+    if (isLiveSupabaseConfigured) {
+      try {
+        await supabase.from('profiles').insert([newProfile]);
+        await supabase.from('students').insert([newStudent]);
+      } catch (err) {
+        console.warn('Live Supabase student insert warning:', err);
+      }
+    }
+
+    await this.logAudit('REGISTER_STUDENT', 'students', newStudentId, null, {
+      student_number: newStudent.student_number,
+      name: data.full_name,
+      email: data.email,
+    });
+
+    const all = await this.getStudents();
+    return all.find((s) => s.id === newStudentId)!;
+  },
+
+  async updateStudent(studentId: string, data: Partial<Student> & { full_name?: string; email?: string }): Promise<Student> {
+    const currentStudents = localStore.getStudents();
+    const existing = currentStudents.find((s) => s.id === studentId);
+    if (!existing) throw new Error('Student not found');
+
+    const updatedStudent: Student = {
+      ...existing,
+      ...data,
+      updated_at: new Date().toISOString(),
+    };
+
+    localStore.saveStudents(
+      currentStudents.map((s) => (s.id === studentId ? updatedStudent : s))
+    );
+
+    // If profile info was provided, update profile as well
+    if (data.full_name || data.email || data.mobile_no || data.student_number) {
+      const profiles = localStore.getProfiles();
+      const existingProfile = profiles.find((p) => p.id === existing.profile_id);
+      if (existingProfile) {
+        let firstName = existingProfile.first_name;
+        let lastName = existingProfile.last_name;
+        if (data.full_name) {
+          const parts = data.full_name.trim().split(' ');
+          firstName = parts[0] || firstName;
+          lastName = parts.length > 1 ? parts.slice(1).join(' ') : lastName;
+        }
+
+        const updatedProfile: Profile = {
+          ...existingProfile,
+          first_name: firstName,
+          last_name: lastName,
+          email: data.email ? data.email.trim().toLowerCase() : existingProfile.email,
+          phone: data.mobile_no !== undefined ? data.mobile_no : existingProfile.phone,
+          id_number: data.student_number !== undefined ? data.student_number : existingProfile.id_number,
+          updated_at: new Date().toISOString(),
+        };
+
+        localStore.saveProfiles(
+          profiles.map((p) => (p.id === existing.profile_id ? updatedProfile : p))
+        );
+      }
+    }
+
+    await this.logAudit('UPDATE_STUDENT', 'students', studentId, existing, updatedStudent);
+    const all = await this.getStudents();
+    return all.find((s) => s.id === studentId)!;
+  },
+
+  async deleteStudent(studentId: string): Promise<void> {
+    const currentStudents = localStore.getStudents();
+    const target = currentStudents.find((s) => s.id === studentId);
+    if (!target) return;
+
+    localStore.saveStudents(currentStudents.filter((s) => s.id !== studentId));
+
+    // Also remove or deactivate profile
+    if (target.profile_id) {
+      const profiles = localStore.getProfiles();
+      localStore.saveProfiles(profiles.filter((p) => p.id !== target.profile_id));
+    }
+
+    // Clean enrollments
+    const enrollments = localStore.getEnrollments();
+    localStore.saveEnrollments(enrollments.filter((e) => e.student_id !== studentId));
+
+    if (isLiveSupabaseConfigured) {
+      try {
+        await supabase.from('students').delete().eq('id', studentId);
+        if (target.profile_id) {
+          await supabase.from('profiles').delete().eq('id', target.profile_id);
+        }
+      } catch (err) {
+        console.warn('Live Supabase student delete warning:', err);
+      }
+    }
+
+    await this.logAudit('DELETE_STUDENT', 'students', studentId, target, null);
+  },
+
   // Enrollments
   async getEnrollments(): Promise<Enrollment[]> {
     const enrollments = localStore.getEnrollments();

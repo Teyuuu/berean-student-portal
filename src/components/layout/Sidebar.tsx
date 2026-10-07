@@ -58,7 +58,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             items: [
               { label: 'Enrollment Periods', to: '/admin/enrollment-periods', icon: <Calendar className="w-4 h-4 mr-3" /> },
               { label: 'Enrollment Requests', to: '/admin/enrollments', icon: <FileCheck className="w-4 h-4 mr-3" /> },
-              { label: 'Student Directory', to: '/admin/students', icon: <Users className="w-4 h-4 mr-3" /> },
+              { label: 'Student List', to: '/admin/students', icon: <Users className="w-4 h-4 mr-3" /> },
               { label: 'Grades & Records', to: '/admin/grades', icon: <Award className="w-4 h-4 mr-3" /> },
             ],
           },
@@ -88,9 +88,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           {
             title: 'Registrar Operations',
             items: [
+              { label: 'Student List', to: '/staff/students', icon: <Users className="w-4 h-4 mr-3" /> },
               { label: 'Applicant Verifications', to: '/staff/registrations', icon: <CheckCircle2 className="w-4 h-4 mr-3" /> },
               { label: 'Enrollment Requests', to: '/staff/enrollments', icon: <FileCheck className="w-4 h-4 mr-3" /> },
-              { label: 'Student Records', to: '/staff/students', icon: <Users className="w-4 h-4 mr-3" /> },
               { label: 'Grades Management', to: '/staff/grades', icon: <Award className="w-4 h-4 mr-3" /> },
               { label: 'Document Review', to: '/staff/documents', icon: <FolderOpen className="w-4 h-4 mr-3" /> },
               { label: 'Announcements', to: '/staff/announcements', icon: <Megaphone className="w-4 h-4 mr-3" /> },

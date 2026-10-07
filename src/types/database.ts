@@ -151,6 +151,46 @@ export interface Student {
   admission_date?: string | null;
   expected_graduation_date?: string | null;
   graduation_date?: string | null;
+
+  // Detailed Registration Form Fields
+  nickname?: string | null;
+  date_of_birth?: string | null;
+  age?: number | string | null;
+  gender?: string | null;
+  civil_status?: string | null;
+  nationality?: string | null;
+  present_address?: string | null;
+  mobile_no?: string | null;
+  occupation?: string | null;
+  business_address?: string | null;
+  business_tel_no?: string | null;
+  school_graduated?: string | null;
+  date_graduated?: string | null;
+  degree_honors_awards?: string | null;
+
+  // Emergency & Reference Details
+  character_reference_name?: string | null;
+  character_reference_no?: string | null;
+  emergency_contact_name?: string | null;
+  emergency_address?: string | null;
+  emergency_no?: string | null;
+  emergency_relation?: string | null;
+
+  // Spiritual / Church Background
+  home_church?: string | null;
+  church_address?: string | null;
+  pastor_name?: string | null;
+  date_saved?: string | null;
+  date_baptized?: string | null;
+  ministries_involved?: string | null;
+  special_skills?: string | null;
+  musical_instruments?: string | null;
+
+  // Personal Statement & Health
+  reason_for_enrolling?: string | null;
+  health_information?: string | null;
+  brief_testimony?: string | null;
+
   created_at: string;
   updated_at: string;
   profile?: Profile;
