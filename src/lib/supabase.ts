@@ -42,6 +42,7 @@ import {
   AuditLog,
   StudentStatus,
   EnrollmentStatus,
+  UserRole,
 } from '@/types';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://mock-berean.supabase.co';
@@ -174,6 +175,9 @@ class LocalDataStore {
   // Staff
   getStaff(): Staff[] {
     return this.load('staff', INITIAL_STAFF);
+  }
+  saveStaff(items: Staff[]) {
+    this.save('staff', items);
   }
 
   // Students
@@ -848,5 +852,186 @@ export const api = {
     };
     const logs = localStore.getAuditLogs();
     localStore.saveAuditLogs([newLog, ...logs]);
+  },
+
+  // ==========================================
+  // USER ACCOUNT LIST & MANAGEMENT (ADMIN)
+  // ==========================================
+  async getAccounts(): Promise<Profile[]> {
+    const profiles = localStore.getProfiles();
+    const students = localStore.getStudents();
+    const staff = localStore.getStaff();
+
+    return profiles.map((p) => {
+      let idNum = p.id_number;
+      if (!idNum) {
+        if (p.role === 'STUDENT' || p.role === 'ALUMNI') {
+          const std = students.find((s) => s.profile_id === p.id);
+          idNum = std?.student_number || null;
+        } else if (p.role === 'STAFF') {
+          const stf = staff.find((s) => s.profile_id === p.id);
+          idNum = stf?.employee_number || null;
+        }
+      }
+      return {
+        ...p,
+        id_number: idNum || (p.role === 'ADMIN' ? 'ADM-2024-001' : 'N/A'),
+      };
+    });
+  },
+
+  async createAccount(data: {
+    id_number: string;
+    first_name: string;
+    middle_name?: string;
+    last_name: string;
+    email: string;
+    password: string;
+    role: UserRole;
+    phone?: string;
+    is_active: boolean;
+    programId?: string;
+    yearLevelId?: string;
+    department?: string;
+    title?: string;
+  }): Promise<Profile> {
+    const newProfileId = crypto.randomUUID();
+    const cleanEmail = data.email.trim().toLowerCase();
+
+    const newProfile: Profile = {
+      id: newProfileId,
+      id_number: data.id_number.trim(),
+      first_name: data.first_name.trim(),
+      middle_name: data.middle_name ? data.middle_name.trim() : null,
+      last_name: data.last_name.trim(),
+      email: cleanEmail,
+      phone: data.phone || null,
+      role: data.role,
+      profile_photo_url: null,
+      is_active: data.is_active,
+      login_status: 'OFFLINE',
+      last_login_at: null,
+      password: data.password || 'Berean2026!',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    const profiles = localStore.getProfiles();
+    localStore.saveProfiles([newProfile, ...profiles]);
+
+    // Role-specific complementary records
+    if (data.role === 'STUDENT' || data.role === 'ALUMNI') {
+      const newStudent: Student = {
+        id: crypto.randomUUID(),
+        profile_id: newProfileId,
+        student_number: data.id_number.trim(),
+        program_id: data.programId || '11111111-1111-1111-1111-111111111101',
+        curriculum_id: '55555555-5555-5555-5555-555555555501',
+        year_level_id: data.yearLevelId || '44444444-4444-4444-4444-444444444401',
+        student_status: data.role === 'ALUMNI' ? 'ALUMNI' : 'ACTIVE',
+        admission_date: new Date().toISOString().split('T')[0],
+        expected_graduation_date: null,
+        graduation_date: data.role === 'ALUMNI' ? new Date().toISOString().split('T')[0] : null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      const students = localStore.getStudents();
+      localStore.saveStudents([...students, newStudent]);
+
+      if (data.role === 'ALUMNI') {
+        const alumniProfile: AlumniProfile = {
+          id: crypto.randomUUID(),
+          student_id: newStudent.id,
+          profile_id: newProfileId,
+          graduation_year: new Date().getFullYear(),
+          graduation_date: new Date().toISOString().split('T')[0],
+          degree_conferred: 'Bachelor of Theology',
+          email: cleanEmail,
+          phone: data.phone || null,
+          is_directory_visible: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        const alumniProfiles = localStore.getAlumniProfiles();
+        localStore.saveAlumniProfiles([...alumniProfiles, alumniProfile]);
+      }
+    } else if (data.role === 'STAFF') {
+      const newStaff: Staff = {
+        id: crypto.randomUUID(),
+        profile_id: newProfileId,
+        employee_number: data.id_number.trim(),
+        department: data.department || 'Office of the Registrar',
+        title: data.title || 'Staff Officer',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      const staffList = localStore.getStaff();
+      localStore.saveStaff([...staffList, newStaff]);
+    }
+
+    await this.logAudit('CREATE_USER_ACCOUNT', 'profiles', newProfileId, null, {
+      id_number: data.id_number,
+      email: cleanEmail,
+      role: data.role,
+      name: `${data.first_name} ${data.last_name}`,
+    });
+
+    return newProfile;
+  },
+
+  async updateAccount(id: string, updates: Partial<Profile>): Promise<Profile> {
+    const profiles = localStore.getProfiles();
+    const target = profiles.find((p) => p.id === id);
+    if (!target) throw new Error('Account not found');
+
+    const updated = profiles.map((p) =>
+      p.id === id
+        ? {
+            ...p,
+            ...updates,
+            updated_at: new Date().toISOString(),
+          }
+        : p
+    );
+    localStore.saveProfiles(updated);
+
+    if (updates.id_number) {
+      if (target.role === 'STUDENT' || target.role === 'ALUMNI') {
+        const students = localStore.getStudents();
+        localStore.saveStudents(
+          students.map((s) => (s.profile_id === id ? { ...s, student_number: updates.id_number! } : s))
+        );
+      } else if (target.role === 'STAFF') {
+        const staff = localStore.getStaff();
+        localStore.saveStaff(
+          staff.map((st) => (st.profile_id === id ? { ...st, employee_number: updates.id_number! } : st))
+        );
+      }
+    }
+
+    await this.logAudit('UPDATE_USER_ACCOUNT', 'profiles', id, target, updates);
+    return updated.find((p) => p.id === id)!;
+  },
+
+  async toggleAccountStatus(id: string, is_active: boolean): Promise<Profile> {
+    return this.updateAccount(id, { is_active });
+  },
+
+  async resetAccountPassword(id: string, newPassword: string): Promise<Profile> {
+    return this.updateAccount(id, { password: newPassword });
+  },
+
+  async deleteAccount(id: string): Promise<void> {
+    const profiles = localStore.getProfiles();
+    const target = profiles.find((p) => p.id === id);
+    localStore.saveProfiles(profiles.filter((p) => p.id !== id));
+    if (target?.role === 'STUDENT' || target?.role === 'ALUMNI') {
+      const students = localStore.getStudents();
+      localStore.saveStudents(students.filter((s) => s.profile_id !== id));
+    } else if (target?.role === 'STAFF') {
+      const staff = localStore.getStaff();
+      localStore.saveStaff(staff.filter((s) => s.profile_id !== id));
+    }
+    await this.logAudit('DELETE_USER_ACCOUNT', 'profiles', id, target, null);
   },
 };

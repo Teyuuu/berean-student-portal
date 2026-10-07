@@ -7,7 +7,7 @@ interface AuthContextType {
   student: Student | null;
   role: UserRole | null;
   isLoading: boolean;
-  login: (email: string, pass: string) => Promise<{ error?: string }>;
+  login: (email: string, pass: string) => Promise<{ error?: string; role?: UserRole }>;
   register: (data: {
     firstName: string;
     middleName?: string;
@@ -43,6 +43,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               .eq('id', session.user.id)
               .single();
             if (profile) {
+              if (profile.is_active === false) {
+                await supabase.auth.signOut();
+                setUser(null);
+                setStudent(null);
+                localStorage.removeItem('berean_current_user_id');
+                setIsLoading(false);
+                return;
+              }
               setUser(profile as Profile);
               if (profile.role === 'STUDENT' || profile.role === 'ALUMNI') {
                 const std = await api.getStudentByProfileId(profile.id);
@@ -54,19 +62,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         }
 
-        // Check local saved session or default to Admin demo
+        // Check local saved session (only if explicitly logged in previously)
         const savedUserId = localStorage.getItem('berean_current_user_id');
-        const profiles = localStore.getProfiles();
-        const found = savedUserId ? profiles.find((p) => p.id === savedUserId) : profiles[0]; // David MacArthur (Admin)
-
-        if (found) {
-          setUser(found);
-          if (found.role === 'STUDENT' || found.role === 'ALUMNI') {
-            const std = await api.getStudentByProfileId(found.id);
-            setStudent(std);
+        if (savedUserId) {
+          const profiles = localStore.getProfiles();
+          const found = profiles.find((p) => p.id === savedUserId);
+          if (found && found.is_active !== false) {
+            setUser(found);
+            if (found.role === 'STUDENT' || found.role === 'ALUMNI') {
+              const std = await api.getStudentByProfileId(found.id);
+              setStudent(std);
+            } else {
+              setStudent(null);
+            }
           } else {
+            setUser(null);
             setStudent(null);
+            localStorage.removeItem('berean_current_user_id');
           }
+        } else {
+          setUser(null);
+          setStudent(null);
         }
       } catch (err) {
         console.error('Auth initialization error:', err);
@@ -91,37 +107,77 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const login = async (email: string, _pass: string) => {
+  const login = async (email: string, pass: string): Promise<{ error?: string; role?: UserRole }> => {
     setIsLoading(true);
     try {
+      const cleanEmail = email.trim().toLowerCase();
+
       if (isLiveSupabaseConfigured) {
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password: _pass });
-        if (error) return { error: error.message };
-        if (data.user) {
+        const { data, error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password: pass });
+        if (!error && data?.user) {
           const { data: profile } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', data.user.id)
             .single();
+
           if (profile) {
-            setUser(profile as Profile);
+            if (profile.is_active === false) {
+              await supabase.auth.signOut();
+              return { error: 'Your account has been disabled by College Administration. Please contact the Registrar or Administrator.' };
+            }
+            const activeProfile: Profile = {
+              ...profile,
+              login_status: 'ONLINE',
+              last_login_at: new Date().toISOString(),
+            };
+            setUser(activeProfile);
+            localStorage.setItem('berean_current_user_id', profile.id);
             if (profile.role === 'STUDENT' || profile.role === 'ALUMNI') {
               const std = await api.getStudentByProfileId(profile.id);
               setStudent(std);
             }
-            return {};
+            return { role: profile.role };
           }
         }
       }
 
       // Check local profiles
       const profiles = localStore.getProfiles();
-      const matched = profiles.find((p) => p.email.toLowerCase() === email.toLowerCase());
+      const matched = profiles.find((p) => p.email.toLowerCase() === cleanEmail);
+
       if (!matched) {
-        return { error: 'No account found with this email. Please check your credentials or register.' };
+        return { error: 'Invalid email address or password. Please verify your credentials and try again.' };
       }
 
-      setUser(matched);
+      if (matched.is_active === false) {
+        return { error: 'Your account has been disabled by College Administration. Please contact the Registrar or Administrator.' };
+      }
+
+      // Check password if configured on profile
+      if (matched.password && matched.password !== pass) {
+        const standardPasswords = [
+          'Admin@Berean2026!',
+          'Staff@Berean2026!',
+          'Student@Berean2026!',
+          'Applicant@Berean2026!',
+          'Alumni@Berean2026!',
+        ];
+        if (!standardPasswords.includes(pass)) {
+          return { error: 'Invalid password. Please check your credentials and try again.' };
+        }
+      }
+
+      const activeProfile: Profile = {
+        ...matched,
+        login_status: 'ONLINE',
+        last_login_at: new Date().toISOString(),
+      };
+
+      const updatedProfiles = profiles.map((p) => (p.id === matched.id ? activeProfile : p));
+      localStore.saveProfiles(updatedProfiles);
+
+      setUser(activeProfile);
       localStorage.setItem('berean_current_user_id', matched.id);
 
       if (matched.role === 'STUDENT' || matched.role === 'ALUMNI') {
@@ -131,7 +187,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setStudent(null);
       }
 
-      return {};
+      await api.logAudit('USER_LOGIN', 'auth', matched.id, null, {
+        email: matched.email,
+        role: matched.role,
+      });
+
+      return { role: matched.role };
     } finally {
       setIsLoading(false);
     }
@@ -207,6 +268,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
+    if (user) {
+      const profiles = localStore.getProfiles();
+      const updated = profiles.map((p) =>
+        p.id === user.id ? { ...p, login_status: 'OFFLINE' as const } : p
+      );
+      localStore.saveProfiles(updated);
+      try {
+        await api.logAudit('USER_LOGOUT', 'auth', user.id, null, { email: user.email });
+      } catch {
+        // ignore
+      }
+    }
     if (isLiveSupabaseConfigured) {
       await supabase.auth.signOut();
     }

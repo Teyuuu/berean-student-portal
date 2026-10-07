@@ -3,7 +3,6 @@ import { Outlet, Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Navbar } from '@/components/layout/Navbar';
 import { Sidebar } from '@/components/layout/Sidebar';
-import { TopBanner } from '@/components/layout/TopBanner';
 import { Loader2 } from 'lucide-react';
 
 export const AppLayout: React.FC = () => {
@@ -27,7 +26,6 @@ export const AppLayout: React.FC = () => {
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50">
-      <TopBanner />
       <Navbar
         isSidebarOpen={isSidebarOpen}
         onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}

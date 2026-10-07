@@ -17,6 +17,7 @@ import {
   FileSpreadsheet,
   CheckCircle2,
   FolderOpen,
+  UserCog,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -59,6 +60,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
               { label: 'Enrollment Requests', to: '/admin/enrollments', icon: <FileCheck className="w-4 h-4 mr-3" /> },
               { label: 'Student Directory', to: '/admin/students', icon: <Users className="w-4 h-4 mr-3" /> },
               { label: 'Grades & Records', to: '/admin/grades', icon: <Award className="w-4 h-4 mr-3" /> },
+            ],
+          },
+          {
+            title: 'Account Management',
+            items: [
+              { label: 'Account List', to: '/admin/accounts', icon: <UserCog className="w-4 h-4 mr-3" /> },
             ],
           },
           {

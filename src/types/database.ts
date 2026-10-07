@@ -45,6 +45,7 @@ export type NotificationType = 'INFO' | 'SUCCESS' | 'WARNING' | 'ALERT';
 
 export interface Profile {
   id: string;
+  id_number?: string | null;
   first_name: string;
   middle_name?: string | null;
   last_name: string;
@@ -53,6 +54,9 @@ export interface Profile {
   role: UserRole;
   profile_photo_url?: string | null;
   is_active: boolean;
+  login_status?: 'ONLINE' | 'OFFLINE';
+  last_login_at?: string | null;
+  password?: string;
   created_at: string;
   updated_at: string;
 }

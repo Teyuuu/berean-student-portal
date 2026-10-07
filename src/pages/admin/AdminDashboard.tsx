@@ -16,6 +16,7 @@ import {
   Clock,
   CheckCircle,
   AlertTriangle,
+  UserCog,
 } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 
@@ -24,6 +25,7 @@ export const AdminDashboard: React.FC = () => {
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [accountsCount, setAccountsCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -33,16 +35,18 @@ export const AdminDashboard: React.FC = () => {
   const loadDashboardData = async () => {
     setLoading(true);
     try {
-      const [stdData, enrData, ayData, annData] = await Promise.all([
+      const [stdData, enrData, ayData, annData, accData] = await Promise.all([
         api.getStudents(),
         api.getEnrollments(),
         api.getAcademicYears(),
         api.getAnnouncements(),
+        api.getAccounts(),
       ]);
       setStudents(stdData);
       setEnrollments(enrData);
       setAcademicYears(ayData);
       setAnnouncements(annData);
+      setAccountsCount(accData.length);
     } finally {
       setLoading(false);
     }
@@ -102,6 +106,12 @@ export const AdminDashboard: React.FC = () => {
           </p>
         </div>
         <div className="flex items-center space-x-2">
+          <Link to="/admin/accounts">
+            <Button variant="outline" size="sm" className="bg-white border-blue-900/30 text-blue-950 hover:bg-blue-50 font-medium">
+              <UserCog className="w-4 h-4 mr-2 text-blue-900" />
+              Account List
+            </Button>
+          </Link>
           <Link to="/admin/curriculum">
             <Button variant="outline" size="sm">
               <BookOpen className="w-4 h-4 mr-2" />
@@ -118,7 +128,18 @@ export const AdminDashboard: React.FC = () => {
       </div>
 
       {/* Metrics Row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+        <Link to="/admin/accounts" className="block hover:opacity-95 transition-opacity">
+          <Card className="p-4 bg-white border-blue-200/80 hover:border-blue-400 transition-colors h-full">
+            <div className="text-[11px] font-semibold text-blue-900 uppercase tracking-wider flex items-center">
+              <UserCog className="w-3 h-3 mr-1" />
+              User Accounts
+            </div>
+            <div className="text-2xl font-bold text-blue-950 mt-1">{accountsCount}</div>
+            <div className="text-[11px] text-blue-600 mt-1 font-medium">Manage access &rarr;</div>
+          </Card>
+        </Link>
+
         <Card className="p-4 bg-white border-slate-200">
           <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
             Total Students
