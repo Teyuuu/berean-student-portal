@@ -31,6 +31,10 @@ import {
   Music,
   Sparkles,
   X,
+  ArrowRight,
+  ArrowLeft,
+  Check,
+  ShieldAlert,
 } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 
@@ -50,6 +54,9 @@ export const StudentsManagementPage: React.FC = () => {
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
 
+  // Step state for the 4-step wizard (1: Personal, 2: Educational, 3: Emergency, 4: Spiritual & Account)
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
+
   // Status Dialog State
   const [newStatus, setNewStatus] = useState<StudentStatus>('ACTIVE');
   const [assignedStudentNumber, setAssignedStudentNumber] = useState('');
@@ -58,17 +65,9 @@ export const StudentsManagementPage: React.FC = () => {
 
   // Form State for Register / Edit
   const [formData, setFormData] = useState({
-    // Header & Essential
+    // Step 1: Personal Information
     student_number: '',
     full_name: '',
-    email: '',
-    password: '',
-    program_id: '',
-    year_level_id: '',
-    curriculum_id: '',
-    student_status: 'ENROLLED' as StudentStatus,
-
-    // Personal Information
     nickname: '',
     date_of_birth: '',
     age: '',
@@ -77,6 +76,8 @@ export const StudentsManagementPage: React.FC = () => {
     nationality: 'Filipino',
     present_address: '',
     mobile_no: '',
+
+    // Step 2: Educational & Professional Background
     occupation: '',
     business_address: '',
     business_tel_no: '',
@@ -84,7 +85,7 @@ export const StudentsManagementPage: React.FC = () => {
     date_graduated: '',
     degree_honors_awards: '',
 
-    // Character & Emergency Reference
+    // Step 3: Emergency & Character Reference
     character_reference_name: '',
     character_reference_no: '',
     emergency_contact_name: '',
@@ -92,7 +93,7 @@ export const StudentsManagementPage: React.FC = () => {
     emergency_no: '',
     emergency_relation: '',
 
-    // Spiritual / Church Background
+    // Step 4: Spiritual, Faith, Account & Academic Details
     home_church: '',
     church_address: '',
     pastor_name: '',
@@ -101,11 +102,16 @@ export const StudentsManagementPage: React.FC = () => {
     ministries_involved: '',
     special_skills: '',
     musical_instruments: '',
-
-    // Personal Statements
     reason_for_enrolling: '',
     health_information: '',
     brief_testimony: '',
+
+    email: '',
+    password: '',
+    program_id: '',
+    year_level_id: '',
+    curriculum_id: '',
+    student_status: 'ENROLLED' as StudentStatus,
   });
 
   const [formSubmitting, setFormSubmitting] = useState(false);
@@ -135,11 +141,8 @@ export const StudentsManagementPage: React.FC = () => {
   }, []);
 
   const getNextStudentNumber = (currentList: Student[]) => {
-    // Generate sequential auto ID matching "# Student No. (Auto)" pattern
-    const year = new Date().getFullYear();
     const count = currentList.length + 1;
-    const padded = String(count).padStart(4, '0');
-    return padded;
+    return String(count).padStart(4, '0');
   };
 
   const handleOpenRegister = () => {
@@ -147,13 +150,6 @@ export const StudentsManagementPage: React.FC = () => {
     setFormData({
       student_number: autoNumber,
       full_name: '',
-      email: '',
-      password: 'Student@Berean2026!',
-      program_id: programs[0]?.id || '',
-      year_level_id: yearLevels[0]?.id || '',
-      curriculum_id: curricula[0]?.id || '',
-      student_status: 'ENROLLED',
-
       nickname: '',
       date_of_birth: '',
       age: '',
@@ -162,6 +158,7 @@ export const StudentsManagementPage: React.FC = () => {
       nationality: 'Filipino',
       present_address: '',
       mobile_no: '',
+
       occupation: '',
       business_address: '',
       business_tel_no: '',
@@ -184,11 +181,18 @@ export const StudentsManagementPage: React.FC = () => {
       ministries_involved: '',
       special_skills: '',
       musical_instruments: '',
-
       reason_for_enrolling: '',
       health_information: '',
       brief_testimony: '',
+
+      email: '',
+      password: 'Student@Berean2026!',
+      program_id: programs[0]?.id || '',
+      year_level_id: yearLevels[0]?.id || '',
+      curriculum_id: curricula[0]?.id || '',
+      student_status: 'ENROLLED',
     });
+    setCurrentStep(1);
     setFormError(null);
     setIsRegisterOpen(true);
   };
@@ -198,13 +202,6 @@ export const StudentsManagementPage: React.FC = () => {
     setFormData({
       student_number: s.student_number || '',
       full_name: s.profile ? `${s.profile.first_name} ${s.profile.last_name}` : '',
-      email: s.profile?.email || '',
-      password: '',
-      program_id: s.program_id || programs[0]?.id || '',
-      year_level_id: s.year_level_id || yearLevels[0]?.id || '',
-      curriculum_id: s.curriculum_id || curricula[0]?.id || '',
-      student_status: s.student_status,
-
       nickname: s.nickname || '',
       date_of_birth: s.date_of_birth || '',
       age: s.age ? String(s.age) : '',
@@ -213,6 +210,7 @@ export const StudentsManagementPage: React.FC = () => {
       nationality: s.nationality || 'Filipino',
       present_address: s.present_address || '',
       mobile_no: s.mobile_no || s.profile?.phone || '',
+
       occupation: s.occupation || '',
       business_address: s.business_address || '',
       business_tel_no: s.business_tel_no || '',
@@ -235,11 +233,18 @@ export const StudentsManagementPage: React.FC = () => {
       ministries_involved: s.ministries_involved || '',
       special_skills: s.special_skills || '',
       musical_instruments: s.musical_instruments || '',
-
       reason_for_enrolling: s.reason_for_enrolling || '',
       health_information: s.health_information || '',
       brief_testimony: s.brief_testimony || '',
+
+      email: s.profile?.email || '',
+      password: '',
+      program_id: s.program_id || programs[0]?.id || '',
+      year_level_id: s.year_level_id || yearLevels[0]?.id || '',
+      curriculum_id: s.curriculum_id || curricula[0]?.id || '',
+      student_status: s.student_status,
     });
+    setCurrentStep(1);
     setFormError(null);
     setIsEditOpen(true);
   };
@@ -263,19 +268,49 @@ export const StudentsManagementPage: React.FC = () => {
     }
   };
 
+  // Step validation
+  const validateStep = (stepNumber: number) => {
+    setFormError(null);
+    if (stepNumber === 1) {
+      if (!formData.full_name.trim()) {
+        setFormError('Full Name is required.');
+        return false;
+      }
+      if (!formData.date_of_birth) {
+        setFormError('Date of Birth is required.');
+        return false;
+      }
+      if (!formData.age) {
+        setFormError('Age is required.');
+        return false;
+      }
+    } else if (stepNumber === 4) {
+      if (!formData.email.trim()) {
+        setFormError('Institutional Email is required.');
+        return false;
+      }
+      if (isRegisterOpen && !formData.password.trim()) {
+        setFormError('Password is required for student portal access.');
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const handleNextStep = () => {
+    if (validateStep(currentStep)) {
+      setCurrentStep((prev) => (Math.min(prev + 1, 4) as 1 | 2 | 3 | 4));
+    }
+  };
+
+  const handlePrevStep = () => {
+    setFormError(null);
+    setCurrentStep((prev) => (Math.max(prev - 1, 1) as 1 | 2 | 3 | 4));
+  };
+
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setFormError(null);
-
-    if (!formData.full_name.trim()) {
-      setFormError('Full Name is required.');
-      return;
-    }
-
-    if (!formData.email.trim()) {
-      setFormError('Email Address is required.');
-      return;
-    }
+    if (!validateStep(1) || !validateStep(4)) return;
 
     setFormSubmitting(true);
     try {
@@ -339,7 +374,7 @@ export const StudentsManagementPage: React.FC = () => {
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedStudent) return;
-    setFormError(null);
+    if (!validateStep(1) || !validateStep(4)) return;
 
     setFormSubmitting(true);
     try {
@@ -417,7 +452,7 @@ export const StudentsManagementPage: React.FC = () => {
       assignedStudentNumber || undefined
     );
 
-    // If graduated or alumni, preserve record and ensure alumni_profiles entry!
+    // If graduated or alumni, preserve record and ensure alumni_profiles entry
     if (newStatus === 'GRADUATED' || newStatus === 'ALUMNI') {
       const existingAlumni = await api.getAlumniByProfileId(selectedStudent.profile_id);
       if (!existingAlumni) {
@@ -665,11 +700,15 @@ export const StudentsManagementPage: React.FC = () => {
       </Card>
 
       {/* ========================================================================= */}
-      {/* REGISTER / EDIT STUDENT MODAL (EXACT FORM FIELDS AS PICTURED)             */}
+      {/* 4-STEP WIZARD MODAL (REGISTER & EDIT STUDENT)                             */}
+      {/* 1. Personal Information                                                   */}
+      {/* 2. Educational & Professional Background                                  */}
+      {/* 3. Emergency & Character Reference                                        */}
+      {/* 4. Spiritual, Faith, Account & Program Placement                          */}
       {/* ========================================================================= */}
       {(isRegisterOpen || isEditOpen) && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
-          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full my-6 overflow-hidden border border-slate-200">
+          <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full my-6 overflow-hidden border border-slate-200">
             {/* Modal Header */}
             <div className="bg-emerald-800 text-white px-6 py-4 flex items-center justify-between border-b border-emerald-900">
               <div className="flex items-center space-x-2.5">
@@ -690,10 +729,128 @@ export const StudentsManagementPage: React.FC = () => {
               </button>
             </div>
 
+            {/* Step Indicator Tabs */}
+            <div className="bg-slate-50 border-b border-slate-200 px-6 py-3">
+              <div className="grid grid-cols-4 gap-2">
+                {/* Step 1 */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (currentStep > 1 || validateStep(1)) setCurrentStep(1);
+                  }}
+                  className={`flex items-center space-x-2 text-left py-2 px-2.5 rounded-lg border transition-all text-xs font-semibold ${
+                    currentStep === 1
+                      ? 'bg-emerald-50 border-emerald-300 text-emerald-900 shadow-xs ring-1 ring-emerald-300'
+                      : currentStep > 1
+                      ? 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
+                      : 'bg-transparent border-transparent text-slate-400'
+                  }`}
+                >
+                  <div
+                    className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[11px] shrink-0 ${
+                      currentStep === 1
+                        ? 'bg-emerald-700 text-white'
+                        : currentStep > 1
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : 'bg-slate-200 text-slate-600'
+                    }`}
+                  >
+                    {currentStep > 1 ? <Check className="w-3.5 h-3.5" /> : '1'}
+                  </div>
+                  <span className="truncate">1. Personal</span>
+                </button>
+
+                {/* Step 2 */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (currentStep > 2 || validateStep(currentStep)) setCurrentStep(2);
+                  }}
+                  className={`flex items-center space-x-2 text-left py-2 px-2.5 rounded-lg border transition-all text-xs font-semibold ${
+                    currentStep === 2
+                      ? 'bg-emerald-50 border-emerald-300 text-emerald-900 shadow-xs ring-1 ring-emerald-300'
+                      : currentStep > 2
+                      ? 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
+                      : 'bg-transparent border-transparent text-slate-400'
+                  }`}
+                >
+                  <div
+                    className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[11px] shrink-0 ${
+                      currentStep === 2
+                        ? 'bg-emerald-700 text-white'
+                        : currentStep > 2
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : 'bg-slate-200 text-slate-600'
+                    }`}
+                  >
+                    {currentStep > 2 ? <Check className="w-3.5 h-3.5" /> : '2'}
+                  </div>
+                  <span className="truncate">2. Educational</span>
+                </button>
+
+                {/* Step 3 */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (currentStep > 3 || validateStep(currentStep)) setCurrentStep(3);
+                  }}
+                  className={`flex items-center space-x-2 text-left py-2 px-2.5 rounded-lg border transition-all text-xs font-semibold ${
+                    currentStep === 3
+                      ? 'bg-emerald-50 border-emerald-300 text-emerald-900 shadow-xs ring-1 ring-emerald-300'
+                      : currentStep > 3
+                      ? 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
+                      : 'bg-transparent border-transparent text-slate-400'
+                  }`}
+                >
+                  <div
+                    className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[11px] shrink-0 ${
+                      currentStep === 3
+                        ? 'bg-emerald-700 text-white'
+                        : currentStep > 3
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : 'bg-slate-200 text-slate-600'
+                    }`}
+                  >
+                    {currentStep > 3 ? <Check className="w-3.5 h-3.5" /> : '3'}
+                  </div>
+                  <span className="truncate">3. Emergency</span>
+                </button>
+
+                {/* Step 4 */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (validateStep(currentStep)) setCurrentStep(4);
+                  }}
+                  className={`flex items-center space-x-2 text-left py-2 px-2.5 rounded-lg border transition-all text-xs font-semibold ${
+                    currentStep === 4
+                      ? 'bg-emerald-50 border-emerald-300 text-emerald-900 shadow-xs ring-1 ring-emerald-300'
+                      : 'bg-transparent border-transparent text-slate-400'
+                  }`}
+                >
+                  <div
+                    className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[11px] shrink-0 ${
+                      currentStep === 4
+                        ? 'bg-emerald-700 text-white'
+                        : 'bg-slate-200 text-slate-600'
+                    }`}
+                  >
+                    4
+                  </div>
+                  <span className="truncate">4. Spiritual & Acct</span>
+                </button>
+              </div>
+            </div>
+
             {/* Instruction banner */}
-            <div className="mx-6 mt-6 p-3 bg-sky-50 border border-sky-200 rounded-lg flex items-center space-x-2 text-sky-800 text-xs">
+            <div className="mx-6 mt-4 p-3 bg-sky-50 border border-sky-200 rounded-lg flex items-center space-x-2 text-sky-800 text-xs">
               <Info className="w-4 h-4 text-sky-600 shrink-0" />
-              <span>Fill in the student information below. Fields marked with <span className="text-red-500 font-bold">*</span> are required.</span>
+              <span>
+                {currentStep === 1 && 'Step 1 of 4: Fill in basic biographical and personal information. Required fields are marked with *.'}
+                {currentStep === 2 && 'Step 2 of 4: Enter educational background, past schools, degrees, and employment/occupation history.'}
+                {currentStep === 3 && 'Step 3 of 4: Provide emergency contact person, contact details, relationship, and character reference.'}
+                {currentStep === 4 && 'Step 4 of 4: Provide church background, salvation & baptism dates, personal testimony, and portal login account.'}
+              </span>
             </div>
 
             {formError && (
@@ -702,567 +859,609 @@ export const StudentsManagementPage: React.FC = () => {
               </div>
             )}
 
-            {/* Form Body */}
-            <form onSubmit={isRegisterOpen ? handleRegisterSubmit : handleEditSubmit} className="p-6 space-y-6">
-              {/* Row 1: Student No. (Auto) & Full Name */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
-                    <span className="font-mono mr-1">#</span> Student No. (Auto)
-                  </label>
-                  <Input
-                    value={formData.student_number}
-                    onChange={(e) => setFormData({ ...formData, student_number: e.target.value })}
-                    placeholder="0003"
-                    className="h-10 bg-slate-50 font-mono"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
-                    <Users className="w-3.5 h-3.5 mr-1 text-slate-600" />
-                    Full Name <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <Input
-                    required
-                    value={formData.full_name}
-                    onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                    placeholder="Enter full name"
-                    className="h-10"
-                  />
-                </div>
-              </div>
+            {/* Form Body with Multi-Step Views */}
+            <form onSubmit={isRegisterOpen ? handleRegisterSubmit : handleEditSubmit} className="p-6">
+              {/* ================================================================= */}
+              {/* STEP 1: PERSONAL INFORMATION                                      */}
+              {/* ================================================================= */}
+              {currentStep === 1 && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
+                        <span className="font-mono mr-1">#</span> Student No. (Auto)
+                      </label>
+                      <Input
+                        value={formData.student_number}
+                        onChange={(e) => setFormData({ ...formData, student_number: e.target.value })}
+                        placeholder="0003"
+                        className="h-10 bg-slate-50 font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
+                        <Users className="w-3.5 h-3.5 mr-1 text-slate-600" />
+                        Full Name <span className="text-red-500 ml-1">*</span>
+                      </label>
+                      <Input
+                        required
+                        value={formData.full_name}
+                        onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                        placeholder="Enter full name"
+                        className="h-10"
+                      />
+                    </div>
+                  </div>
 
-              {/* Row 2: Nickname & Date of Birth */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
-                    <FileText className="w-3.5 h-3.5 mr-1 text-slate-600" />
-                    Nickname
-                  </label>
-                  <Input
-                    value={formData.nickname}
-                    onChange={(e) => setFormData({ ...formData, nickname: e.target.value })}
-                    placeholder="Enter nickname"
-                    className="h-10"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
-                    <Calendar className="w-3.5 h-3.5 mr-1 text-slate-600" />
-                    Date of Birth <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <Input
-                    type="date"
-                    value={formData.date_of_birth}
-                    onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
-                    className="h-10"
-                  />
-                </div>
-              </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
+                        <FileText className="w-3.5 h-3.5 mr-1 text-slate-600" />
+                        Nickname
+                      </label>
+                      <Input
+                        value={formData.nickname}
+                        onChange={(e) => setFormData({ ...formData, nickname: e.target.value })}
+                        placeholder="Enter nickname"
+                        className="h-10"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
+                        <Calendar className="w-3.5 h-3.5 mr-1 text-slate-600" />
+                        Date of Birth <span className="text-red-500 ml-1">*</span>
+                      </label>
+                      <Input
+                        type="date"
+                        required
+                        value={formData.date_of_birth}
+                        onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
+                        className="h-10"
+                      />
+                    </div>
+                  </div>
 
-              {/* Row 3: Age & Gender */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
-                    <span className="font-mono text-xs mr-1">123</span>
-                    Age <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <Input
-                    type="number"
-                    value={formData.age}
-                    onChange={(e) => setFormData({ ...formData, age: e.target.value })}
-                    placeholder="Enter age"
-                    className="h-10"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
-                    <Users className="w-3.5 h-3.5 mr-1 text-slate-600" />
-                    Gender <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <Select
-                    value={formData.gender}
-                    onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
-                    className="h-10 text-xs"
-                  >
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                  </Select>
-                </div>
-              </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
+                        <span className="font-mono text-xs mr-1">123</span>
+                        Age <span className="text-red-500 ml-1">*</span>
+                      </label>
+                      <Input
+                        type="number"
+                        required
+                        value={formData.age}
+                        onChange={(e) => setFormData({ ...formData, age: e.target.value })}
+                        placeholder="Enter age"
+                        className="h-10"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
+                        <Users className="w-3.5 h-3.5 mr-1 text-slate-600" />
+                        Gender <span className="text-red-500 ml-1">*</span>
+                      </label>
+                      <Select
+                        value={formData.gender}
+                        onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                        className="h-10 text-xs"
+                      >
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                      </Select>
+                    </div>
+                  </div>
 
-              {/* Row 4: Civil Status & Nationality */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
-                    <HeartHandshake className="w-3.5 h-3.5 mr-1 text-slate-600" />
-                    Civil Status
-                  </label>
-                  <Input
-                    value={formData.civil_status}
-                    onChange={(e) => setFormData({ ...formData, civil_status: e.target.value })}
-                    placeholder="e.g., Single, Married"
-                    className="h-10"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
-                    <MapPin className="w-3.5 h-3.5 mr-1 text-slate-600" />
-                    Nationality
-                  </label>
-                  <Input
-                    value={formData.nationality}
-                    onChange={(e) => setFormData({ ...formData, nationality: e.target.value })}
-                    placeholder="Filipino"
-                    className="h-10"
-                  />
-                </div>
-              </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
+                        <HeartHandshake className="w-3.5 h-3.5 mr-1 text-slate-600" />
+                        Civil Status
+                      </label>
+                      <Input
+                        value={formData.civil_status}
+                        onChange={(e) => setFormData({ ...formData, civil_status: e.target.value })}
+                        placeholder="e.g., Single, Married"
+                        className="h-10"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
+                        <MapPin className="w-3.5 h-3.5 mr-1 text-slate-600" />
+                        Nationality
+                      </label>
+                      <Input
+                        value={formData.nationality}
+                        onChange={(e) => setFormData({ ...formData, nationality: e.target.value })}
+                        placeholder="Filipino"
+                        className="h-10"
+                      />
+                    </div>
+                  </div>
 
-              {/* Row 5: Present Address (Full width) */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
-                  <MapPin className="w-3.5 h-3.5 mr-1 text-slate-600" />
-                  Present Address
-                </label>
-                <Input
-                  value={formData.present_address}
-                  onChange={(e) => setFormData({ ...formData, present_address: e.target.value })}
-                  placeholder="Enter complete address"
-                  className="h-10"
-                />
-              </div>
-
-              {/* Row 6: Mobile No. & Occupation */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
-                    <Phone className="w-3.5 h-3.5 mr-1 text-slate-600" />
-                    Mobile No.
-                  </label>
-                  <Input
-                    value={formData.mobile_no}
-                    onChange={(e) => setFormData({ ...formData, mobile_no: e.target.value })}
-                    placeholder="e.g., 0912-345-6789"
-                    className="h-10"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
-                    <Building className="w-3.5 h-3.5 mr-1 text-slate-600" />
-                    Occupation
-                  </label>
-                  <Input
-                    value={formData.occupation}
-                    onChange={(e) => setFormData({ ...formData, occupation: e.target.value })}
-                    placeholder="Enter occupation"
-                    className="h-10"
-                  />
-                </div>
-              </div>
-
-              {/* Row 7: Business/Company Address (Full width) */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
-                  <Building className="w-3.5 h-3.5 mr-1 text-slate-600" />
-                  Business/Company Address
-                </label>
-                <Input
-                  value={formData.business_address}
-                  onChange={(e) => setFormData({ ...formData, business_address: e.target.value })}
-                  placeholder="Enter business address"
-                  className="h-10"
-                />
-              </div>
-
-              {/* Row 8: Business Tel No. & School Graduated */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
-                    <Phone className="w-3.5 h-3.5 mr-1 text-slate-600" />
-                    Business Tel No.
-                  </label>
-                  <Input
-                    value={formData.business_tel_no}
-                    onChange={(e) => setFormData({ ...formData, business_tel_no: e.target.value })}
-                    placeholder="e.g., 02-123-4567"
-                    className="h-10"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
-                    <GraduationCap className="w-3.5 h-3.5 mr-1 text-slate-600" />
-                    School Graduated
-                  </label>
-                  <Input
-                    value={formData.school_graduated}
-                    onChange={(e) => setFormData({ ...formData, school_graduated: e.target.value })}
-                    placeholder="Enter school name"
-                    className="h-10"
-                  />
-                </div>
-              </div>
-
-              {/* Row 9: Date Graduated */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
-                  <Calendar className="w-3.5 h-3.5 mr-1 text-slate-600" />
-                  Date Graduated
-                </label>
-                <Input
-                  type="date"
-                  value={formData.date_graduated}
-                  onChange={(e) => setFormData({ ...formData, date_graduated: e.target.value })}
-                  className="h-10"
-                />
-              </div>
-
-              {/* Row 10: Degree/Honors/Awards (Full width) */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
-                  <Award className="w-3.5 h-3.5 mr-1 text-slate-600" />
-                  Degree/Honors/Awards
-                </label>
-                <Input
-                  value={formData.degree_honors_awards}
-                  onChange={(e) => setFormData({ ...formData, degree_honors_awards: e.target.value })}
-                  placeholder="Enter degrees, honors, or awards"
-                  className="h-10"
-                />
-              </div>
-
-              {/* Row 11: Character Reference Name & Reference No. */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
-                    <Users className="w-3.5 h-3.5 mr-1 text-slate-600" />
-                    Character Reference Name
-                  </label>
-                  <Input
-                    value={formData.character_reference_name}
-                    onChange={(e) => setFormData({ ...formData, character_reference_name: e.target.value })}
-                    placeholder="Enter reference name"
-                    className="h-10"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
-                    <Phone className="w-3.5 h-3.5 mr-1 text-slate-600" />
-                    Emergency No.
-                  </label>
-                  <Input
-                    value={formData.character_reference_no}
-                    onChange={(e) => setFormData({ ...formData, character_reference_no: e.target.value })}
-                    placeholder="e.g., 0912-345-6789"
-                    className="h-10"
-                  />
-                </div>
-              </div>
-
-              {/* Row 12: Emergency Contact Name (Full width) */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
-                  <Users className="w-3.5 h-3.5 mr-1 text-slate-600" />
-                  Emergency Contact Name
-                </label>
-                <Input
-                  value={formData.emergency_contact_name}
-                  onChange={(e) => setFormData({ ...formData, emergency_contact_name: e.target.value })}
-                  placeholder="Enter emergency contact name"
-                  className="h-10"
-                />
-              </div>
-
-              {/* Row 13: Emergency Address (Full width) */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
-                  <MapPin className="w-3.5 h-3.5 mr-1 text-slate-600" />
-                  Emergency Address
-                </label>
-                <Input
-                  value={formData.emergency_address}
-                  onChange={(e) => setFormData({ ...formData, emergency_address: e.target.value })}
-                  placeholder="Enter emergency contact address"
-                  className="h-10"
-                />
-              </div>
-
-              {/* Row 14: Emergency No. & Relation */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
-                    <Phone className="w-3.5 h-3.5 mr-1 text-slate-600" />
-                    Emergency No.
-                  </label>
-                  <Input
-                    value={formData.emergency_no}
-                    onChange={(e) => setFormData({ ...formData, emergency_no: e.target.value })}
-                    placeholder="e.g., 0912-345-6789"
-                    className="h-10"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
-                    <Users className="w-3.5 h-3.5 mr-1 text-slate-600" />
-                    Relation
-                  </label>
-                  <Input
-                    value={formData.emergency_relation}
-                    onChange={(e) => setFormData({ ...formData, emergency_relation: e.target.value })}
-                    placeholder="e.g., Father, Mother, Sibling"
-                    className="h-10"
-                  />
-                </div>
-              </div>
-
-              {/* Row 15: Home Church (Full width) */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
-                  <Church className="w-3.5 h-3.5 mr-1 text-slate-600" />
-                  Home Church
-                </label>
-                <Input
-                  value={formData.home_church}
-                  onChange={(e) => setFormData({ ...formData, home_church: e.target.value })}
-                  placeholder="Enter church name"
-                  className="h-10"
-                />
-              </div>
-
-              {/* Row 16: Church Address (Full width) */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
-                  <MapPin className="w-3.5 h-3.5 mr-1 text-slate-600" />
-                  Church Address
-                </label>
-                <Input
-                  value={formData.church_address}
-                  onChange={(e) => setFormData({ ...formData, church_address: e.target.value })}
-                  placeholder="Enter church address"
-                  className="h-10"
-                />
-              </div>
-
-              {/* Row 17: Pastor's Name & Date Saved */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
-                    <Users className="w-3.5 h-3.5 mr-1 text-slate-600" />
-                    Pastor's Name
-                  </label>
-                  <Input
-                    value={formData.pastor_name}
-                    onChange={(e) => setFormData({ ...formData, pastor_name: e.target.value })}
-                    placeholder="Enter pastor's name"
-                    className="h-10"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
-                    <Calendar className="w-3.5 h-3.5 mr-1 text-slate-600" />
-                    Date Saved
-                  </label>
-                  <Input
-                    type="date"
-                    value={formData.date_saved}
-                    onChange={(e) => setFormData({ ...formData, date_saved: e.target.value })}
-                    className="h-10"
-                  />
-                </div>
-              </div>
-
-              {/* Row 18: Date Baptized */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
-                  <Calendar className="w-3.5 h-3.5 mr-1 text-slate-600" />
-                  Date Baptized
-                </label>
-                <Input
-                  type="date"
-                  value={formData.date_baptized}
-                  onChange={(e) => setFormData({ ...formData, date_baptized: e.target.value })}
-                  className="h-10"
-                />
-              </div>
-
-              {/* Row 19: Ministries Involved (Full width) */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
-                  <CheckCircle className="w-3.5 h-3.5 mr-1 text-slate-600" />
-                  Ministries Involved
-                </label>
-                <Input
-                  value={formData.ministries_involved}
-                  onChange={(e) => setFormData({ ...formData, ministries_involved: e.target.value })}
-                  placeholder="Enter ministries (comma separated)"
-                  className="h-10"
-                />
-              </div>
-
-              {/* Row 20: Special Skills (Full width) */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
-                  <Sparkles className="w-3.5 h-3.5 mr-1 text-slate-600" />
-                  Special Skills
-                </label>
-                <Input
-                  value={formData.special_skills}
-                  onChange={(e) => setFormData({ ...formData, special_skills: e.target.value })}
-                  placeholder="Enter special skills"
-                  className="h-10"
-                />
-              </div>
-
-              {/* Row 21: Musical Instruments (Full width) */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
-                  <Music className="w-3.5 h-3.5 mr-1 text-slate-600" />
-                  Musical Instruments
-                </label>
-                <Input
-                  value={formData.musical_instruments}
-                  onChange={(e) => setFormData({ ...formData, musical_instruments: e.target.value })}
-                  placeholder="Enter instruments"
-                  className="h-10"
-                />
-              </div>
-
-              {/* Row 22: Portal Credentials & Academic Program */}
-              <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg space-y-4">
-                <div className="text-xs font-bold uppercase text-slate-700 tracking-wider flex items-center">
-                  <Lock className="w-4 h-4 mr-1.5 text-blue-900" />
-                  Portal Account & Academic Placement
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
-                      <Mail className="w-3.5 h-3.5 mr-1 text-slate-600" />
-                      Institutional Email <span className="text-red-500 ml-1">*</span>
+                      <MapPin className="w-3.5 h-3.5 mr-1 text-slate-600" />
+                      Present Address
                     </label>
                     <Input
-                      type="email"
-                      required
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      placeholder="e.g., student@berean.edu"
-                      className="h-10 bg-white"
+                      value={formData.present_address}
+                      onChange={(e) => setFormData({ ...formData, present_address: e.target.value })}
+                      placeholder="Enter complete address"
+                      className="h-10"
                     />
                   </div>
+
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
-                      <Lock className="w-3.5 h-3.5 mr-1 text-slate-600" />
-                      Password <span className="text-red-500 ml-1">*</span>
+                      <Phone className="w-3.5 h-3.5 mr-1 text-slate-600" />
+                      Mobile No.
                     </label>
                     <Input
-                      type="text"
-                      value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      placeholder={isEditOpen ? 'Leave blank to retain password' : 'Enter password'}
-                      className="h-10 bg-white"
+                      value={formData.mobile_no}
+                      onChange={(e) => setFormData({ ...formData, mobile_no: e.target.value })}
+                      placeholder="e.g., 0912-345-6789"
+                      className="h-10"
                     />
                   </div>
                 </div>
+              )}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      Academic Degree Program
-                    </label>
-                    <Select
-                      value={formData.program_id}
-                      onChange={(e) => setFormData({ ...formData, program_id: e.target.value })}
-                      className="h-10 bg-white text-xs"
-                    >
-                      {programs.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.code} — {p.name}
-                        </option>
-                      ))}
-                    </Select>
+              {/* ================================================================= */}
+              {/* STEP 2: EDUCATIONAL & PROFESSIONAL BACKGROUND                     */}
+              {/* ================================================================= */}
+              {currentStep === 2 && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
+                        <Building className="w-3.5 h-3.5 mr-1 text-slate-600" />
+                        Occupation
+                      </label>
+                      <Input
+                        value={formData.occupation}
+                        onChange={(e) => setFormData({ ...formData, occupation: e.target.value })}
+                        placeholder="Enter occupation"
+                        className="h-10"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
+                        <Phone className="w-3.5 h-3.5 mr-1 text-slate-600" />
+                        Business Tel No.
+                      </label>
+                      <Input
+                        value={formData.business_tel_no}
+                        onChange={(e) => setFormData({ ...formData, business_tel_no: e.target.value })}
+                        placeholder="e.g., 02-123-4567"
+                        className="h-10"
+                      />
+                    </div>
                   </div>
+
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      Initial Year Level
+                    <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
+                      <Building className="w-3.5 h-3.5 mr-1 text-slate-600" />
+                      Business/Company Address
                     </label>
-                    <Select
-                      value={formData.year_level_id}
-                      onChange={(e) => setFormData({ ...formData, year_level_id: e.target.value })}
-                      className="h-10 bg-white text-xs"
-                    >
-                      {yearLevels.map((y) => (
-                        <option key={y.id} value={y.id}>
-                          {y.name}
-                        </option>
-                      ))}
-                    </Select>
+                    <Input
+                      value={formData.business_address}
+                      onChange={(e) => setFormData({ ...formData, business_address: e.target.value })}
+                      placeholder="Enter business address"
+                      className="h-10"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
+                        <GraduationCap className="w-3.5 h-3.5 mr-1 text-slate-600" />
+                        School Graduated
+                      </label>
+                      <Input
+                        value={formData.school_graduated}
+                        onChange={(e) => setFormData({ ...formData, school_graduated: e.target.value })}
+                        placeholder="Enter school name"
+                        className="h-10"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
+                        <Calendar className="w-3.5 h-3.5 mr-1 text-slate-600" />
+                        Date Graduated
+                      </label>
+                      <Input
+                        type="date"
+                        value={formData.date_graduated}
+                        onChange={(e) => setFormData({ ...formData, date_graduated: e.target.value })}
+                        className="h-10"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
+                      <Award className="w-3.5 h-3.5 mr-1 text-slate-600" />
+                      Degree/Honors/Awards
+                    </label>
+                    <Input
+                      value={formData.degree_honors_awards}
+                      onChange={(e) => setFormData({ ...formData, degree_honors_awards: e.target.value })}
+                      placeholder="Enter degrees, honors, or awards"
+                      className="h-10"
+                    />
                   </div>
                 </div>
-              </div>
+              )}
 
-              {/* Row 23: Reason for Enrolling */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
-                  <FileText className="w-3.5 h-3.5 mr-1 text-slate-600" />
-                  Reason for Enrolling
-                </label>
-                <textarea
-                  rows={3}
-                  value={formData.reason_for_enrolling}
-                  onChange={(e) => setFormData({ ...formData, reason_for_enrolling: e.target.value })}
-                  placeholder="Share your reason for enrolling..."
-                  className="w-full rounded-md border border-slate-300 p-2 text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none"
-                />
-              </div>
+              {/* ================================================================= */}
+              {/* STEP 3: EMERGENCY & CHARACTER REFERENCE                           */}
+              {/* ================================================================= */}
+              {currentStep === 3 && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
+                        <Users className="w-3.5 h-3.5 mr-1 text-slate-600" />
+                        Character Reference Name
+                      </label>
+                      <Input
+                        value={formData.character_reference_name}
+                        onChange={(e) => setFormData({ ...formData, character_reference_name: e.target.value })}
+                        placeholder="Enter reference name"
+                        className="h-10"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
+                        <Phone className="w-3.5 h-3.5 mr-1 text-slate-600" />
+                        Reference Contact No.
+                      </label>
+                      <Input
+                        value={formData.character_reference_no}
+                        onChange={(e) => setFormData({ ...formData, character_reference_no: e.target.value })}
+                        placeholder="e.g., 0912-345-6789"
+                        className="h-10"
+                      />
+                    </div>
+                  </div>
 
-              {/* Row 24: Health Information */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
-                  <HeartPulse className="w-3.5 h-3.5 mr-1 text-slate-600" />
-                  Health Information
-                </label>
-                <textarea
-                  rows={3}
-                  value={formData.health_information}
-                  onChange={(e) => setFormData({ ...formData, health_information: e.target.value })}
-                  placeholder="Any medical conditions, allergies, or health concerns..."
-                  className="w-full rounded-md border border-slate-300 p-2 text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none"
-                />
-              </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
+                      <Users className="w-3.5 h-3.5 mr-1 text-slate-600" />
+                      Emergency Contact Name
+                    </label>
+                    <Input
+                      value={formData.emergency_contact_name}
+                      onChange={(e) => setFormData({ ...formData, emergency_contact_name: e.target.value })}
+                      placeholder="Enter emergency contact name"
+                      className="h-10"
+                    />
+                  </div>
 
-              {/* Row 25: Brief Testimony */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
-                  <FileText className="w-3.5 h-3.5 mr-1 text-slate-600" />
-                  Brief Testimony
-                </label>
-                <textarea
-                  rows={3}
-                  value={formData.brief_testimony}
-                  onChange={(e) => setFormData({ ...formData, brief_testimony: e.target.value })}
-                  placeholder="Share your testimony..."
-                  className="w-full rounded-md border border-slate-300 p-2 text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none"
-                />
-              </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
+                      <MapPin className="w-3.5 h-3.5 mr-1 text-slate-600" />
+                      Emergency Address
+                    </label>
+                    <Input
+                      value={formData.emergency_address}
+                      onChange={(e) => setFormData({ ...formData, emergency_address: e.target.value })}
+                      placeholder="Enter emergency contact address"
+                      className="h-10"
+                    />
+                  </div>
 
-              {/* Footer Buttons */}
-              <div className="pt-4 border-t border-slate-200 flex items-center justify-end space-x-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setIsRegisterOpen(false);
-                    setIsEditOpen(false);
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  isLoading={formSubmitting}
-                  className="bg-emerald-700 hover:bg-emerald-800 text-white font-semibold"
-                >
-                  {isRegisterOpen ? 'Submit & Register Student' : 'Save Changes'}
-                </Button>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
+                        <Phone className="w-3.5 h-3.5 mr-1 text-slate-600" />
+                        Emergency No.
+                      </label>
+                      <Input
+                        value={formData.emergency_no}
+                        onChange={(e) => setFormData({ ...formData, emergency_no: e.target.value })}
+                        placeholder="e.g., 0912-345-6789"
+                        className="h-10"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
+                        <Users className="w-3.5 h-3.5 mr-1 text-slate-600" />
+                        Relation
+                      </label>
+                      <Input
+                        value={formData.emergency_relation}
+                        onChange={(e) => setFormData({ ...formData, emergency_relation: e.target.value })}
+                        placeholder="e.g., Father, Mother, Sibling"
+                        className="h-10"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ================================================================= */}
+              {/* STEP 4: SPIRITUAL BACKGROUND, ACCOUNT & ENROLLMENT               */}
+              {/* ================================================================= */}
+              {currentStep === 4 && (
+                <div className="space-y-4">
+                  {/* Church details */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
+                        <Church className="w-3.5 h-3.5 mr-1 text-slate-600" />
+                        Home Church
+                      </label>
+                      <Input
+                        value={formData.home_church}
+                        onChange={(e) => setFormData({ ...formData, home_church: e.target.value })}
+                        placeholder="Enter church name"
+                        className="h-10"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
+                        <Users className="w-3.5 h-3.5 mr-1 text-slate-600" />
+                        Pastor's Name
+                      </label>
+                      <Input
+                        value={formData.pastor_name}
+                        onChange={(e) => setFormData({ ...formData, pastor_name: e.target.value })}
+                        placeholder="Enter pastor's name"
+                        className="h-10"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
+                      <MapPin className="w-3.5 h-3.5 mr-1 text-slate-600" />
+                      Church Address
+                    </label>
+                    <Input
+                      value={formData.church_address}
+                      onChange={(e) => setFormData({ ...formData, church_address: e.target.value })}
+                      placeholder="Enter church address"
+                      className="h-10"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
+                        <Calendar className="w-3.5 h-3.5 mr-1 text-slate-600" />
+                        Date Saved
+                      </label>
+                      <Input
+                        type="date"
+                        value={formData.date_saved}
+                        onChange={(e) => setFormData({ ...formData, date_saved: e.target.value })}
+                        className="h-10"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
+                        <Calendar className="w-3.5 h-3.5 mr-1 text-slate-600" />
+                        Date Baptized
+                      </label>
+                      <Input
+                        type="date"
+                        value={formData.date_baptized}
+                        onChange={(e) => setFormData({ ...formData, date_baptized: e.target.value })}
+                        className="h-10"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
+                        <CheckCircle className="w-3.5 h-3.5 mr-1 text-slate-600" />
+                        Ministries
+                      </label>
+                      <Input
+                        value={formData.ministries_involved}
+                        onChange={(e) => setFormData({ ...formData, ministries_involved: e.target.value })}
+                        placeholder="Youth, Choir, etc."
+                        className="h-10 text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
+                        <Sparkles className="w-3.5 h-3.5 mr-1 text-slate-600" />
+                        Special Skills
+                      </label>
+                      <Input
+                        value={formData.special_skills}
+                        onChange={(e) => setFormData({ ...formData, special_skills: e.target.value })}
+                        placeholder="Teaching, Graphics"
+                        className="h-10 text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
+                        <Music className="w-3.5 h-3.5 mr-1 text-slate-600" />
+                        Instruments
+                      </label>
+                      <Input
+                        value={formData.musical_instruments}
+                        onChange={(e) => setFormData({ ...formData, musical_instruments: e.target.value })}
+                        placeholder="Piano, Guitar, etc."
+                        className="h-10 text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Statements */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
+                        <FileText className="w-3.5 h-3.5 mr-1 text-slate-600" />
+                        Reason for Enrolling
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={formData.reason_for_enrolling}
+                        onChange={(e) => setFormData({ ...formData, reason_for_enrolling: e.target.value })}
+                        placeholder="Share reason..."
+                        className="w-full rounded-md border border-slate-300 p-2 text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
+                        <HeartPulse className="w-3.5 h-3.5 mr-1 text-slate-600" />
+                        Health Information
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={formData.health_information}
+                        onChange={(e) => setFormData({ ...formData, health_information: e.target.value })}
+                        placeholder="Medical conditions, allergies..."
+                        className="w-full rounded-md border border-slate-300 p-2 text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
+                      <FileText className="w-3.5 h-3.5 mr-1 text-slate-600" />
+                      Brief Testimony
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={formData.brief_testimony}
+                      onChange={(e) => setFormData({ ...formData, brief_testimony: e.target.value })}
+                      placeholder="Share your personal testimony..."
+                      className="w-full rounded-md border border-slate-300 p-2 text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                    />
+                  </div>
+
+                  {/* Portal Credentials & Academic Placement */}
+                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg space-y-3">
+                    <div className="text-xs font-bold uppercase text-slate-700 tracking-wider flex items-center">
+                      <Lock className="w-4 h-4 mr-1.5 text-blue-900" />
+                      Student Portal Account & Placement
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
+                          <Mail className="w-3.5 h-3.5 mr-1 text-slate-600" />
+                          Institutional Email <span className="text-red-500 ml-1">*</span>
+                        </label>
+                        <Input
+                          type="email"
+                          required
+                          value={formData.email}
+                          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                          placeholder="e.g., student@berean.edu"
+                          className="h-10 bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
+                          <Lock className="w-3.5 h-3.5 mr-1 text-slate-600" />
+                          Password {isRegisterOpen && <span className="text-red-500 ml-1">*</span>}
+                        </label>
+                        <Input
+                          type="text"
+                          value={formData.password}
+                          onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                          placeholder={isEditOpen ? 'Leave blank to retain password' : 'Enter password'}
+                          className="h-10 bg-white"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">
+                          Degree Program
+                        </label>
+                        <Select
+                          value={formData.program_id}
+                          onChange={(e) => setFormData({ ...formData, program_id: e.target.value })}
+                          className="h-10 bg-white text-xs"
+                        >
+                          {programs.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.code} — {p.name}
+                            </option>
+                          ))}
+                        </Select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">
+                          Year Level
+                        </label>
+                        <Select
+                          value={formData.year_level_id}
+                          onChange={(e) => setFormData({ ...formData, year_level_id: e.target.value })}
+                          className="h-10 bg-white text-xs"
+                        >
+                          {yearLevels.map((y) => (
+                            <option key={y.id} value={y.id}>
+                              {y.name}
+                            </option>
+                          ))}
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Step Navigation Footer */}
+              <div className="pt-5 mt-4 border-t border-slate-200 flex items-center justify-between">
+                <div>
+                  {currentStep > 1 ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handlePrevStep}
+                      className="text-xs"
+                    >
+                      <ArrowLeft className="w-3.5 h-3.5 mr-1" />
+                      Back
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => {
+                        setIsRegisterOpen(false);
+                        setIsEditOpen(false);
+                      }}
+                      className="text-xs text-slate-500"
+                    >
+                      Cancel
+                    </Button>
+                  )}
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <span className="text-[11px] text-slate-400 mr-2">
+                    Step {currentStep} of 4
+                  </span>
+                  {currentStep < 4 ? (
+                    <Button
+                      type="button"
+                      onClick={handleNextStep}
+                      className="bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs"
+                    >
+                      Next Step
+                      <ArrowRight className="w-3.5 h-3.5 ml-1" />
+                    </Button>
+                  ) : (
+                    <Button
+                      type="submit"
+                      isLoading={formSubmitting}
+                      className="bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs"
+                    >
+                      {isRegisterOpen ? 'Submit & Register Student' : 'Save Changes'}
+                    </Button>
+                  )}
+                </div>
               </div>
             </form>
           </div>
@@ -1311,7 +1510,7 @@ export const StudentsManagementPage: React.FC = () => {
               {/* Personal Information */}
               <div>
                 <h4 className="font-bold text-sm text-blue-950 mb-3 border-b border-slate-200 pb-1 flex items-center">
-                  <Users className="w-4 h-4 mr-1.5 text-blue-900" /> Personal Information
+                  <Users className="w-4 h-4 mr-1.5 text-blue-900" /> 1. Personal Information
                 </h4>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   <div><span className="text-slate-400 block">Full Name:</span> {selectedStudent.profile?.first_name} {selectedStudent.profile?.last_name}</div>
@@ -1330,7 +1529,7 @@ export const StudentsManagementPage: React.FC = () => {
               {/* Educational & Employment */}
               <div>
                 <h4 className="font-bold text-sm text-blue-950 mb-3 border-b border-slate-200 pb-1 flex items-center">
-                  <GraduationCap className="w-4 h-4 mr-1.5 text-blue-900" /> Educational & Employment Background
+                  <GraduationCap className="w-4 h-4 mr-1.5 text-blue-900" /> 2. Educational & Employment Background
                 </h4>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   <div><span className="text-slate-400 block">School Graduated:</span> {selectedStudent.school_graduated || '—'}</div>
@@ -1345,7 +1544,7 @@ export const StudentsManagementPage: React.FC = () => {
               {/* Emergency Contact & References */}
               <div>
                 <h4 className="font-bold text-sm text-blue-950 mb-3 border-b border-slate-200 pb-1 flex items-center">
-                  <HeartHandshake className="w-4 h-4 mr-1.5 text-blue-900" /> Emergency & Character Reference
+                  <HeartHandshake className="w-4 h-4 mr-1.5 text-blue-900" /> 3. Emergency & Character Reference
                 </h4>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   <div><span className="text-slate-400 block">Emergency Contact:</span> {selectedStudent.emergency_contact_name || '—'}</div>
@@ -1360,7 +1559,7 @@ export const StudentsManagementPage: React.FC = () => {
               {/* Spiritual Background */}
               <div>
                 <h4 className="font-bold text-sm text-blue-950 mb-3 border-b border-slate-200 pb-1 flex items-center">
-                  <Church className="w-4 h-4 mr-1.5 text-blue-900" /> Spiritual & Church Background
+                  <Church className="w-4 h-4 mr-1.5 text-blue-900" /> 4. Spiritual Background & Testimony
                 </h4>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   <div><span className="text-slate-400 block">Home Church:</span> {selectedStudent.home_church || '—'}</div>
