@@ -128,19 +128,32 @@ INSERT INTO public.enrollment_periods (id, academic_year_id, semester_id, start_
 ('88888888-8888-8888-8888-888888888801', '22222222-2222-2222-2222-222222222202', '33333333-3333-3333-3333-333333333301', '2026-08-01 00:00:00+00', '2026-08-30 23:59:59+00', 'OPEN'),
 ('88888888-8888-8888-8888-888888888802', '22222222-2222-2222-2222-222222222202', '33333333-3333-3333-3333-333333333302', '2027-01-05 00:00:00+00', '2027-01-25 23:59:59+00', 'UPCOMING');
 
--- 9. Seed Profiles (Admin, Staff, Student, Alumni)
--- Admin
+-- 9. Seed Auth Users and Profiles (Admin, Staff, Student, Alumni)
+DO $$
+BEGIN
+    INSERT INTO auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+    VALUES
+    ('a0000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'admin@berean.edu', crypt('Admin@Berean2026!', gen_salt('bf')), NOW(), '{"provider":"email","providers":["email"]}', '{"role":"ADMIN","first_name":"David","last_name":"MacArthur"}', NOW(), NOW()),
+    ('a0000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'registrar@berean.edu', crypt('Staff@Berean2026!', gen_salt('bf')), NOW(), '{"provider":"email","providers":["email"]}', '{"role":"STAFF","first_name":"Hannah","last_name":"Spurgeon"}', NOW(), NOW()),
+    ('a0000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'student@berean.edu', crypt('Student@Berean2026!', gen_salt('bf')), NOW(), '{"provider":"email","providers":["email"]}', '{"role":"STUDENT","first_name":"Timothy","last_name":"Barnabas"}', NOW(), NOW()),
+    ('a0000000-0000-0000-0000-000000000004', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'applicant@berean.edu', crypt('Applicant@Berean2026!', gen_salt('bf')), NOW(), '{"provider":"email","providers":["email"]}', '{"role":"STUDENT","first_name":"Priscilla","last_name":"Aquila"}', NOW(), NOW()),
+    ('a0000000-0000-0000-0000-000000000005', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'alumni@berean.edu', crypt('Alumni@Berean2026!', gen_salt('bf')), NOW(), '{"provider":"email","providers":["email"]}', '{"role":"ALUMNI","first_name":"Stephen","last_name":"Tyndale"}', NOW(), NOW())
+    ON CONFLICT (id) DO NOTHING;
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE NOTICE 'Skipping auth.users insert: %', SQLERRM;
+END $$;
+
 INSERT INTO public.profiles (id, first_name, middle_name, last_name, email, phone, role, is_active) VALUES
 ('a0000000-0000-0000-0000-000000000001', 'David', 'K.', 'MacArthur', 'admin@berean.edu', '+63 917 100 2001', 'ADMIN', TRUE),
--- Staff
 ('a0000000-0000-0000-0000-000000000002', 'Hannah', 'M.', 'Spurgeon', 'registrar@berean.edu', '+63 917 100 2002', 'STAFF', TRUE),
--- Enrolled Student
 ('a0000000-0000-0000-0000-000000000003', 'Timothy', 'J.', 'Barnabas', 'student@berean.edu', '+63 917 100 2003', 'STUDENT', TRUE),
--- Applicant Student
 ('a0000000-0000-0000-0000-000000000004', 'Priscilla', 'A.', 'Aquila', 'applicant@berean.edu', '+63 917 100 2004', 'STUDENT', TRUE),
--- Alumni
 ('a0000000-0000-0000-0000-000000000005', 'Stephen', 'P.', 'Tyndale', 'alumni@berean.edu', '+63 917 100 2005', 'ALUMNI', TRUE)
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (id) DO UPDATE SET
+    first_name = EXCLUDED.first_name,
+    last_name = EXCLUDED.last_name,
+    role = EXCLUDED.role;
 
 -- Staff Record
 INSERT INTO public.staff (id, profile_id, employee_number, department, title) VALUES

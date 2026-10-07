@@ -8,8 +8,12 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- ============================================================================
 -- 1. PROFILES & CORE ROLES
+DO $$ BEGIN
+    CREATE TYPE user_role AS ENUM ('ADMIN', 'STAFF', 'STUDENT', 'ALUMNI');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 -- ============================================================================
-CREATE TYPE user_role AS ENUM ('ADMIN', 'STAFF', 'STUDENT', 'ALUMNI');
 
 CREATE TABLE IF NOT EXISTS public.profiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -112,19 +116,23 @@ CREATE TABLE IF NOT EXISTS public.curriculum_subjects (
 -- ============================================================================
 -- 4. STUDENTS & STAFF
 -- ============================================================================
-CREATE TYPE student_status_type AS ENUM (
-    'APPLICANT',
-    'PENDING_VERIFICATION',
-    'ACTIVE',
-    'ENROLLED',
-    'NOT_ENROLLED',
-    'ON_LEAVE',
-    'INACTIVE',
-    'SUSPENDED',
-    'WITHDRAWN',
-    'GRADUATED',
-    'ALUMNI'
-);
+DO $$ BEGIN
+    CREATE TYPE student_status_type AS ENUM (
+        'APPLICANT',
+        'PENDING_VERIFICATION',
+        'ACTIVE',
+        'ENROLLED',
+        'NOT_ENROLLED',
+        'ON_LEAVE',
+        'INACTIVE',
+        'SUSPENDED',
+        'WITHDRAWN',
+        'GRADUATED',
+        'ALUMNI'
+    );
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
 CREATE TABLE IF NOT EXISTS public.students (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -166,15 +174,19 @@ CREATE TABLE IF NOT EXISTS public.enrollment_periods (
     CONSTRAINT enrollment_period_dates CHECK (end_date > start_date)
 );
 
-CREATE TYPE enrollment_status_type AS ENUM (
-    'DRAFT',
-    'SUBMITTED',
-    'UNDER_REVIEW',
-    'APPROVED',
-    'REJECTED',
-    'CANCELLED',
-    'COMPLETED'
-);
+DO $$ BEGIN
+    CREATE TYPE enrollment_status_type AS ENUM (
+        'DRAFT',
+        'SUBMITTED',
+        'UNDER_REVIEW',
+        'APPROVED',
+        'REJECTED',
+        'CANCELLED',
+        'COMPLETED'
+    );
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
 CREATE TABLE IF NOT EXISTS public.enrollments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -512,11 +524,13 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
 
 -- --- Profiles RLS ---
+DROP POLICY IF EXISTS "Public profiles are viewable by authenticated users" ON public.profiles;
 CREATE POLICY "Public profiles are viewable by authenticated users"
     ON public.profiles FOR SELECT
     TO authenticated
     USING (TRUE);
 
+DROP POLICY IF EXISTS "Users can update their own profile" ON public.profiles;
 CREATE POLICY "Users can update their own profile"
     ON public.profiles FOR UPDATE
     TO authenticated
@@ -526,6 +540,7 @@ CREATE POLICY "Users can update their own profile"
         role = (SELECT role FROM public.profiles WHERE id = auth.uid()) -- Cannot elevate own role
     );
 
+DROP POLICY IF EXISTS "Admins have full access to profiles" ON public.profiles;
 CREATE POLICY "Admins have full access to profiles"
     ON public.profiles FOR ALL
     TO authenticated
@@ -533,74 +548,96 @@ CREATE POLICY "Admins have full access to profiles"
 
 -- --- Academic Catalog RLS (Programs, Academic Years, Semesters, Year Levels, Curricula, Subjects) ---
 -- Readable by all authenticated users; writable only by Admins
+DROP POLICY IF EXISTS "Academic programs readable by authenticated" ON public.programs;
 CREATE POLICY "Academic programs readable by authenticated"
     ON public.programs FOR SELECT TO authenticated USING (TRUE);
+DROP POLICY IF EXISTS "Admins manage programs" ON public.programs;
 CREATE POLICY "Admins manage programs"
     ON public.programs FOR ALL TO authenticated USING (public.is_admin());
 
+DROP POLICY IF EXISTS "Academic years readable by authenticated" ON public.academic_years;
 CREATE POLICY "Academic years readable by authenticated"
     ON public.academic_years FOR SELECT TO authenticated USING (TRUE);
+DROP POLICY IF EXISTS "Admins manage academic years" ON public.academic_years;
 CREATE POLICY "Admins manage academic years"
     ON public.academic_years FOR ALL TO authenticated USING (public.is_admin());
 
+DROP POLICY IF EXISTS "Semesters readable by authenticated" ON public.semesters;
 CREATE POLICY "Semesters readable by authenticated"
     ON public.semesters FOR SELECT TO authenticated USING (TRUE);
+DROP POLICY IF EXISTS "Admins manage semesters" ON public.semesters;
 CREATE POLICY "Admins manage semesters"
     ON public.semesters FOR ALL TO authenticated USING (public.is_admin());
 
+DROP POLICY IF EXISTS "Year levels readable by authenticated" ON public.year_levels;
 CREATE POLICY "Year levels readable by authenticated"
     ON public.year_levels FOR SELECT TO authenticated USING (TRUE);
+DROP POLICY IF EXISTS "Admins manage year levels" ON public.year_levels;
 CREATE POLICY "Admins manage year levels"
     ON public.year_levels FOR ALL TO authenticated USING (public.is_admin());
 
+DROP POLICY IF EXISTS "Curricula readable by authenticated" ON public.curricula;
 CREATE POLICY "Curricula readable by authenticated"
     ON public.curricula FOR SELECT TO authenticated USING (TRUE);
+DROP POLICY IF EXISTS "Admins manage curricula" ON public.curricula;
 CREATE POLICY "Admins manage curricula"
     ON public.curricula FOR ALL TO authenticated USING (public.is_admin());
 
+DROP POLICY IF EXISTS "Subjects readable by authenticated" ON public.subjects;
 CREATE POLICY "Subjects readable by authenticated"
     ON public.subjects FOR SELECT TO authenticated USING (TRUE);
+DROP POLICY IF EXISTS "Admins manage subjects" ON public.subjects;
 CREATE POLICY "Admins manage subjects"
     ON public.subjects FOR ALL TO authenticated USING (public.is_admin());
 
+DROP POLICY IF EXISTS "Curriculum subjects readable by authenticated" ON public.curriculum_subjects;
 CREATE POLICY "Curriculum subjects readable by authenticated"
     ON public.curriculum_subjects FOR SELECT TO authenticated USING (TRUE);
+DROP POLICY IF EXISTS "Admins manage curriculum subjects" ON public.curriculum_subjects;
 CREATE POLICY "Admins manage curriculum subjects"
     ON public.curriculum_subjects FOR ALL TO authenticated USING (public.is_admin());
 
+DROP POLICY IF EXISTS "Enrollment periods readable by authenticated" ON public.enrollment_periods;
 CREATE POLICY "Enrollment periods readable by authenticated"
     ON public.enrollment_periods FOR SELECT TO authenticated USING (TRUE);
+DROP POLICY IF EXISTS "Staff and admin manage enrollment periods" ON public.enrollment_periods;
 CREATE POLICY "Staff and admin manage enrollment periods"
     ON public.enrollment_periods FOR ALL TO authenticated USING (public.is_staff_or_admin());
 
 -- --- Students Table RLS ---
+DROP POLICY IF EXISTS "Students can view their own student record" ON public.students;
 CREATE POLICY "Students can view their own student record"
     ON public.students FOR SELECT
     TO authenticated
     USING (profile_id = auth.uid() OR public.is_staff_or_admin());
 
+DROP POLICY IF EXISTS "Staff and Admins can manage student records" ON public.students;
 CREATE POLICY "Staff and Admins can manage student records"
     ON public.students FOR ALL
     TO authenticated
     USING (public.is_staff_or_admin());
 
 -- --- Staff Table RLS ---
+DROP POLICY IF EXISTS "Staff records viewable by staff and admin" ON public.staff;
 CREATE POLICY "Staff records viewable by staff and admin"
     ON public.staff FOR SELECT
     TO authenticated
     USING (profile_id = auth.uid() OR public.is_staff_or_admin());
 
+DROP POLICY IF EXISTS "Admins manage staff records" ON public.staff;
 CREATE POLICY "Admins manage staff records"
     ON public.staff FOR ALL
     TO authenticated
     USING (public.is_admin());
 
 -- --- Enrollments RLS ---
+DROP POLICY IF EXISTS "Students view their own enrollments" ON public.enrollments;
 CREATE POLICY "Students view their own enrollments"
     ON public.enrollments FOR SELECT
     TO authenticated
     USING (student_id = public.get_current_student_id() OR public.is_staff_or_admin());
 
+DROP POLICY IF EXISTS "Students can insert draft or submitted enrollment" ON public.enrollments;
 CREATE POLICY "Students can insert draft or submitted enrollment"
     ON public.enrollments FOR INSERT
     TO authenticated
@@ -609,18 +646,21 @@ CREATE POLICY "Students can insert draft or submitted enrollment"
         status IN ('DRAFT', 'SUBMITTED')
     );
 
+DROP POLICY IF EXISTS "Students can update draft enrollment" ON public.enrollments;
 CREATE POLICY "Students can update draft enrollment"
     ON public.enrollments FOR UPDATE
     TO authenticated
     USING (student_id = public.get_current_student_id() AND status = 'DRAFT')
     WITH CHECK (student_id = public.get_current_student_id() AND status IN ('DRAFT', 'SUBMITTED'));
 
+DROP POLICY IF EXISTS "Staff and Admins can manage all enrollments" ON public.enrollments;
 CREATE POLICY "Staff and Admins can manage all enrollments"
     ON public.enrollments FOR ALL
     TO authenticated
     USING (public.is_staff_or_admin());
 
 -- --- Enrollment Subjects RLS ---
+DROP POLICY IF EXISTS "Students view their own enrollment subjects" ON public.enrollment_subjects;
 CREATE POLICY "Students view their own enrollment subjects"
     ON public.enrollment_subjects FOR SELECT
     TO authenticated
@@ -633,6 +673,7 @@ CREATE POLICY "Students view their own enrollment subjects"
         OR public.is_staff_or_admin()
     );
 
+DROP POLICY IF EXISTS "Students manage subjects in draft enrollment" ON public.enrollment_subjects;
 CREATE POLICY "Students manage subjects in draft enrollment"
     ON public.enrollment_subjects FOR ALL
     TO authenticated
@@ -645,12 +686,14 @@ CREATE POLICY "Students manage subjects in draft enrollment"
         )
     );
 
+DROP POLICY IF EXISTS "Staff and Admins manage all enrollment subjects" ON public.enrollment_subjects;
 CREATE POLICY "Staff and Admins manage all enrollment subjects"
     ON public.enrollment_subjects FOR ALL
     TO authenticated
     USING (public.is_staff_or_admin());
 
 -- --- Grades RLS ---
+DROP POLICY IF EXISTS "Students view released grades only" ON public.grades;
 CREATE POLICY "Students view released grades only"
     ON public.grades FOR SELECT
     TO authenticated
@@ -659,45 +702,53 @@ CREATE POLICY "Students view released grades only"
         OR public.is_staff_or_admin()
     );
 
+DROP POLICY IF EXISTS "Staff and Admins manage grades" ON public.grades;
 CREATE POLICY "Staff and Admins manage grades"
     ON public.grades FOR ALL
     TO authenticated
     USING (public.is_staff_or_admin());
 
 -- --- Student Documents RLS ---
+DROP POLICY IF EXISTS "Students view and upload their own documents" ON public.student_documents;
 CREATE POLICY "Students view and upload their own documents"
     ON public.student_documents FOR SELECT
     TO authenticated
     USING (student_id = public.get_current_student_id() OR public.is_staff_or_admin());
 
+DROP POLICY IF EXISTS "Students upload own documents" ON public.student_documents;
 CREATE POLICY "Students upload own documents"
     ON public.student_documents FOR INSERT
     TO authenticated
     WITH CHECK (student_id = public.get_current_student_id());
 
+DROP POLICY IF EXISTS "Staff and Admins manage all student documents" ON public.student_documents;
 CREATE POLICY "Staff and Admins manage all student documents"
     ON public.student_documents FOR ALL
     TO authenticated
     USING (public.is_staff_or_admin());
 
 -- --- Alumni Profiles RLS ---
+DROP POLICY IF EXISTS "Alumni directory viewable by authenticated users" ON public.alumni_profiles;
 CREATE POLICY "Alumni directory viewable by authenticated users"
     ON public.alumni_profiles FOR SELECT
     TO authenticated
     USING (is_directory_visible = TRUE OR profile_id = auth.uid() OR public.is_staff_or_admin());
 
+DROP POLICY IF EXISTS "Alumni can update their own alumni profile" ON public.alumni_profiles;
 CREATE POLICY "Alumni can update their own alumni profile"
     ON public.alumni_profiles FOR UPDATE
     TO authenticated
     USING (profile_id = auth.uid() OR public.is_staff_or_admin())
     WITH CHECK (profile_id = auth.uid() OR public.is_staff_or_admin());
 
+DROP POLICY IF EXISTS "Staff and Admins manage alumni profiles" ON public.alumni_profiles;
 CREATE POLICY "Staff and Admins manage alumni profiles"
     ON public.alumni_profiles FOR ALL
     TO authenticated
     USING (public.is_staff_or_admin());
 
 -- --- Announcements RLS ---
+DROP POLICY IF EXISTS "Announcements viewable based on role" ON public.announcements;
 CREATE POLICY "Announcements viewable based on role"
     ON public.announcements FOR SELECT
     TO authenticated
@@ -710,28 +761,33 @@ CREATE POLICY "Announcements viewable based on role"
         )
     );
 
+DROP POLICY IF EXISTS "Staff and Admins manage announcements" ON public.announcements;
 CREATE POLICY "Staff and Admins manage announcements"
     ON public.announcements FOR ALL
     TO authenticated
     USING (public.is_staff_or_admin());
 
 -- --- Notifications RLS ---
+DROP POLICY IF EXISTS "Users view and update their own notifications" ON public.notifications;
 CREATE POLICY "Users view and update their own notifications"
     ON public.notifications FOR ALL
     TO authenticated
     USING (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "Staff and Admins can create notifications" ON public.notifications;
 CREATE POLICY "Staff and Admins can create notifications"
     ON public.notifications FOR INSERT
     TO authenticated
     WITH CHECK (TRUE);
 
 -- --- Audit Logs RLS ---
+DROP POLICY IF EXISTS "Admins view audit logs" ON public.audit_logs;
 CREATE POLICY "Admins view audit logs"
     ON public.audit_logs FOR SELECT
     TO authenticated
     USING (public.is_admin());
 
+DROP POLICY IF EXISTS "System and staff can insert audit logs" ON public.audit_logs;
 CREATE POLICY "System and staff can insert audit logs"
     ON public.audit_logs FOR INSERT
     TO authenticated
@@ -747,16 +803,19 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- Storage RLS: profile-photos (Public read, user write)
+DROP POLICY IF EXISTS "Profile photos are publicly accessible" ON storage.objects;
 CREATE POLICY "Profile photos are publicly accessible"
     ON storage.objects FOR SELECT
     USING (bucket_id = 'profile-photos');
 
+DROP POLICY IF EXISTS "Users can upload their own profile photo" ON storage.objects;
 CREATE POLICY "Users can upload their own profile photo"
     ON storage.objects FOR INSERT
     TO authenticated
     WITH CHECK (bucket_id = 'profile-photos' AND (storage.foldername(name))[1] = auth.uid()::text);
 
 -- Storage RLS: student-documents (Private, owner and staff access only)
+DROP POLICY IF EXISTS "Students and staff access student documents" ON storage.objects;
 CREATE POLICY "Students and staff access student documents"
     ON storage.objects FOR SELECT
     TO authenticated
@@ -767,6 +826,7 @@ CREATE POLICY "Students and staff access student documents"
         )
     );
 
+DROP POLICY IF EXISTS "Students upload own documents" ON storage.objects;
 CREATE POLICY "Students upload own documents"
     ON storage.objects FOR INSERT
     TO authenticated

@@ -44,17 +44,23 @@ import {
   EnrollmentStatus,
 } from '@/types';
 
-// Supabase client initialization
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://mock-berean.supabase.co';
+const rawAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const rawPublishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
 const supabaseAnonKey =
-  import.meta.env.VITE_SUPABASE_ANON_KEY ||
-  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+  (rawAnonKey && !rawAnonKey.includes('mock') ? rawAnonKey : '') ||
+  (rawPublishableKey && !rawPublishableKey.includes('mock') ? rawPublishableKey : '') ||
+  rawAnonKey ||
   'mock-anon-key';
 
 export const isLiveSupabaseConfigured =
+  Boolean(supabaseUrl) &&
   supabaseUrl !== 'https://mock-berean.supabase.co' &&
   !supabaseUrl.includes('mock') &&
-  supabaseAnonKey.length > 30;
+  Boolean(supabaseAnonKey) &&
+  !supabaseAnonKey.includes('mock') &&
+  supabaseAnonKey.length > 20;
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
