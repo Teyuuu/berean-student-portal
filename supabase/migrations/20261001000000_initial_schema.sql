@@ -423,7 +423,8 @@ BEGIN
         VALUES (
             NEW.id,
             'APPLICANT'
-        );
+        )
+        ON CONFLICT (profile_id) DO NOTHING;
     END IF;
 
     RETURN NEW;
