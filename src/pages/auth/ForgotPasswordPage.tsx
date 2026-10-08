@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { usePageSEO } from '@/hooks/usePageSEO';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/Card';
 import { BookOpen, CheckCircle, ArrowLeft } from 'lucide-react';
 
 export const ForgotPasswordPage: React.FC = () => {
+  usePageSEO();
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { usePageSEO } from '@/hooks/usePageSEO';
 import { api } from '@/lib/supabase';
 import { Program } from '@/types';
 import { Button } from '@/components/ui/Button';
@@ -9,6 +10,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { BookOpen, CheckCircle, ArrowRight, ArrowLeft, AlertCircle } from 'lucide-react';
 
 export const RegisterPage: React.FC = () => {
+  usePageSEO();
   const { register } = useAuth();
   const navigate = useNavigate();
 

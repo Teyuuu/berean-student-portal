@@ -74,7 +74,7 @@ export const AlumniDashboard: React.FC = () => {
             <Link to="/alumni/profile">
               <Button size="sm" variant="gold" className="text-xs">
                 <User className="w-3.5 h-3.5 mr-1" />
-                Update Alumni Directory
+                Update Directory
               </Button>
             </Link>
             <Link to="/alumni/records">

@@ -7,8 +7,9 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Input, Select } from '@/components/ui/Input';
 import { Dialog } from '@/components/ui/Dialog';
-import { FolderOpen, Upload, FileText, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
+import { FolderOpen, Upload, FileText, CheckCircle2, Clock, AlertCircle, Sparkles, RefreshCw } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
+import { processDocumentFile, formatBytes, MAX_FILE_SIZE_BYTES } from '@/lib/fileCompression';
 
 export const StudentDocumentsPage: React.FC = () => {
   const { student } = useAuth();
@@ -17,6 +18,16 @@ export const StudentDocumentsPage: React.FC = () => {
   const [docTitle, setDocTitle] = useState('');
   const [docType, setDocType] = useState<DocumentType>('BIRTH_CERTIFICATE');
   const [fileName, setFileName] = useState('');
+  const [fileSizeBytes, setFileSizeBytes] = useState(154200);
+  const [fileMimeType, setFileMimeType] = useState('application/pdf');
+  const [isCompressing, setIsCompressing] = useState(false);
+  const [compressionStatus, setCompressionStatus] = useState<{
+    originalFormatted: string;
+    compressedFormatted: string;
+    wasCompressed: boolean;
+    savings: number;
+  } | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -36,17 +47,54 @@ export const StudentDocumentsPage: React.FC = () => {
     }
   };
 
+  const handleFileSelection = async (file: File) => {
+    setUploadError(null);
+    setCompressionStatus(null);
+    setIsCompressing(true);
+
+    try {
+      const res = await processDocumentFile(file, MAX_FILE_SIZE_BYTES);
+      if (res.error) {
+        setUploadError(res.error);
+        return;
+      }
+
+      setFileName(res.file.name);
+      setFileSizeBytes(res.compressedSize);
+      setFileMimeType(res.mimeType);
+
+      if (!docTitle) {
+        setDocTitle(file.name.replace(/\.[^/.]+$/, ''));
+      }
+
+      setCompressionStatus({
+        originalFormatted: res.originalFormatted,
+        compressedFormatted: res.compressedFormatted,
+        wasCompressed: res.wasCompressed,
+        savings: res.savingsPercent,
+      });
+    } catch (err: unknown) {
+      setUploadError((err as Error).message || 'Failed to process document file.');
+    } finally {
+      setIsCompressing(false);
+    }
+  };
+
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!student || !docTitle) return;
+    if (fileSizeBytes > MAX_FILE_SIZE_BYTES) {
+      setUploadError('Document exceeds the 5 MB limit. Please compress or choose a smaller file.');
+      return;
+    }
 
     await api.uploadStudentDocument({
       student_id: student.id,
       title: docTitle,
       document_type: docType,
       file_path: `documents/${student.id}/${fileName || 'document.pdf'}`,
-      file_size_bytes: 154200,
-      mime_type: 'application/pdf',
+      file_size_bytes: fileSizeBytes,
+      mime_type: fileMimeType,
       remarks: null,
       verified_by: null,
       verified_at: null,
@@ -55,6 +103,8 @@ export const StudentDocumentsPage: React.FC = () => {
     setIsUploadModalOpen(false);
     setDocTitle('');
     setFileName('');
+    setCompressionStatus(null);
+    setUploadError(null);
     await loadDocs();
   };
 
@@ -172,25 +222,72 @@ export const StudentDocumentsPage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-              Attach File (PDF, PNG, JPG) *
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                Attach File (PDF, PNG, JPG) *
+              </label>
+              <Badge variant="info" className="text-[10px] py-0 px-1.5">
+                Auto-compressed to &le; 5 MB
+              </Badge>
+            </div>
             <Input
               type="file"
+              required
+              accept="application/pdf,image/jpeg,image/png,image/webp"
               onChange={(e) => {
                 if (e.target.files?.[0]) {
-                  setFileName(e.target.files[0].name);
-                  if (!docTitle) setDocTitle(e.target.files[0].name.replace(/\.[^/.]+$/, ''));
+                  handleFileSelection(e.target.files[0]);
                 }
               }}
             />
+            <p className="text-[11px] text-slate-400 mt-1">
+              Images and scanned documents are automatically compressed to ensure fast upload and compliance with the 5 MB limit.
+            </p>
+
+            {isCompressing && (
+              <div className="mt-2 text-xs text-blue-900 bg-blue-50 border border-blue-200 rounded p-2 flex items-center space-x-2">
+                <RefreshCw className="w-3.5 h-3.5 animate-spin text-blue-900 shrink-0" />
+                <span>Compressing document file to comply with 5 MB maximum...</span>
+              </div>
+            )}
+
+            {compressionStatus && (
+              <div className="mt-2 text-xs text-emerald-800 bg-emerald-50 border border-emerald-200 rounded p-2 flex items-center space-x-2">
+                <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>
+                  {compressionStatus.wasCompressed
+                    ? `Auto-compressed: ${compressionStatus.originalFormatted} → ${compressionStatus.compressedFormatted} (${compressionStatus.savings}% reduction, ready to upload)`
+                    : `Verified size: ${compressionStatus.compressedFormatted} (Under 5 MB limit)`}
+                </span>
+              </div>
+            )}
+
+            {uploadError && (
+              <div className="mt-2 text-xs text-red-700 bg-red-50 border border-red-200 rounded p-2 flex items-center space-x-2">
+                <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+                <span>{uploadError}</span>
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end space-x-2 pt-3 border-t border-slate-100">
-            <Button type="button" variant="outline" onClick={() => setIsUploadModalOpen(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setIsUploadModalOpen(false);
+                setCompressionStatus(null);
+                setUploadError(null);
+              }}
+            >
               Cancel
             </Button>
-            <Button type="submit">Upload Document</Button>
+            <Button
+              type="submit"
+              disabled={isCompressing || !fileName || !!uploadError}
+            >
+              Upload Document
+            </Button>
           </div>
         </form>
       </Dialog>

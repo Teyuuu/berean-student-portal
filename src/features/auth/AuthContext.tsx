@@ -20,6 +20,13 @@ interface AuthContextType {
   logout: () => Promise<void>;
   switchPersona: (role: UserRole) => Promise<void>;
   refreshUser: () => Promise<void>;
+  updateProfile: (data: {
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone?: string | null;
+    profile_photo_url?: string | null;
+  }) => Promise<{ error?: string; profile?: Profile }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -308,6 +315,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const updateProfile = async (data: {
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone?: string | null;
+    profile_photo_url?: string | null;
+  }): Promise<{ error?: string; profile?: Profile }> => {
+    if (!user) return { error: 'Not authenticated' };
+    try {
+      const updated = await api.updateMyProfile(user.id, data);
+      setUser(updated);
+      if (updated.role === 'STUDENT' || updated.role === 'ALUMNI') {
+        const std = await api.getStudentByProfileId(updated.id);
+        setStudent(std);
+      }
+      return { profile: updated };
+    } catch (err: unknown) {
+      return { error: (err as Error).message || 'Failed to update profile' };
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -320,6 +348,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logout,
         switchPersona,
         refreshUser,
+        updateProfile,
       }}
     >
       {children}

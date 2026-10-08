@@ -5,8 +5,9 @@ import { AlumniProfile } from '@/types';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input, Textarea } from '@/components/ui/Input';
-import { Award, Briefcase, MapPin, CheckCircle2 } from 'lucide-react';
+import { Award, Briefcase, MapPin, CheckCircle2, Edit3 } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
+import { EditAccountModal } from '@/components/account/EditAccountModal';
 
 export const AlumniProfilePage: React.FC = () => {
   const { user } = useAuth();
@@ -21,6 +22,7 @@ export const AlumniProfilePage: React.FC = () => {
   const [linkedinUrl, setLinkedinUrl] = useState('');
   const [bio, setBio] = useState('');
   const [isDirectoryVisible, setIsDirectoryVisible] = useState(true);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);

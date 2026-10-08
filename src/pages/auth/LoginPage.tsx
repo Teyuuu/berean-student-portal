@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { usePageSEO } from '@/hooks/usePageSEO';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/Card';
 import { AlertCircle, Lock, Mail, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
+  usePageSEO();
   const { login } = useAuth();
   const navigate = useNavigate();
 

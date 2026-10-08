@@ -1,0 +1,19 @@
+# Berean Bible Baptist College - Robots.txt
+# https://berean-student-portal.netlify.app
+
+User-agent: *
+Allow: /
+Allow: /login
+Allow: /register
+Allow: /forgot-password
+Allow: /college-logo.png
+Allow: /favicon.svg
+
+# Protect private student, registrar, and administrative records
+Disallow: /admin/
+Disallow: /staff/
+Disallow: /student/
+Disallow: /alumni/
+
+# XML Sitemap location
+Sitemap: https://berean-student-portal.netlify.app/sitemap.xml

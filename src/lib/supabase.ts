@@ -1262,4 +1262,114 @@ export const api = {
     }
     await this.logAudit('DELETE_USER_ACCOUNT', 'profiles', id, target, null);
   },
+
+  // ==========================================
+  // USER SELF-SERVICE PROFILE UPDATE
+  // (Allowed fields: first_name, last_name, email, phone, profile_photo_url)
+  // ==========================================
+  async updateMyProfile(
+    userId: string,
+    data: {
+      first_name: string;
+      last_name: string;
+      email: string;
+      phone?: string | null;
+      profile_photo_url?: string | null;
+    }
+  ): Promise<Profile> {
+    const cleanEmail = data.email.trim().toLowerCase();
+    const cleanFirstName = data.first_name.trim();
+    const cleanLastName = data.last_name.trim();
+
+    if (!cleanFirstName || !cleanLastName) {
+      throw new Error('First and last name are required.');
+    }
+    if (!cleanEmail) {
+      throw new Error('Email address is required.');
+    }
+
+    // Try live Supabase if configured
+    if (isLiveSupabaseConfigured) {
+      try {
+        const { error } = await supabase
+          .from('profiles')
+          .update({
+            first_name: cleanFirstName,
+            last_name: cleanLastName,
+            email: cleanEmail,
+            phone: data.phone || null,
+            profile_photo_url: data.profile_photo_url || null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', userId);
+        if (error) console.warn('Supabase profile update warning:', error);
+      } catch (err) {
+        console.warn('Supabase remote update failed, persisting locally:', err);
+      }
+    }
+
+    const profiles = localStore.getProfiles();
+    const target = profiles.find((p) => p.id === userId);
+    if (!target) throw new Error('Account profile not found.');
+
+    const updatedProfile: Profile = {
+      ...target,
+      first_name: cleanFirstName,
+      last_name: cleanLastName,
+      email: cleanEmail,
+      phone: data.phone !== undefined ? data.phone : target.phone,
+      profile_photo_url:
+        data.profile_photo_url !== undefined ? data.profile_photo_url : target.profile_photo_url,
+      updated_at: new Date().toISOString(),
+    };
+
+    localStore.saveProfiles(
+      profiles.map((p) => (p.id === userId ? updatedProfile : p))
+    );
+
+    // Synchronize complementary student record if applicable
+    if (target.role === 'STUDENT' || target.role === 'ALUMNI') {
+      const students = localStore.getStudents();
+      localStore.saveStudents(
+        students.map((s) => {
+          if (s.profile_id === userId) {
+            return {
+              ...s,
+              mobile_no: data.phone || s.mobile_no,
+              profile: updatedProfile,
+              updated_at: new Date().toISOString(),
+            };
+          }
+          return s;
+        })
+      );
+
+      if (target.role === 'ALUMNI') {
+        const alumniProfiles = localStore.getAlumniProfiles();
+        localStore.saveAlumniProfiles(
+          alumniProfiles.map((a) => {
+            if (a.profile_id === userId) {
+              return {
+                ...a,
+                email: cleanEmail,
+                phone: data.phone || a.phone,
+                updated_at: new Date().toISOString(),
+              };
+            }
+            return a;
+          })
+        );
+      }
+    }
+
+    await this.logAudit('UPDATE_SELF_PROFILE', 'profiles', userId, target, {
+      first_name: cleanFirstName,
+      last_name: cleanLastName,
+      email: cleanEmail,
+      phone: data.phone,
+      has_photo: !!data.profile_photo_url,
+    });
+
+    return updatedProfile;
+  },
 };

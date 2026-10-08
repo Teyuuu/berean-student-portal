@@ -5,17 +5,43 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
-import { Lock, User, Mail, Phone, BookOpen, Calendar, CheckCircle2 } from 'lucide-react';
+import { Lock, User, Mail, Phone, BookOpen, Calendar, CheckCircle2, Edit3, Camera, Upload, RefreshCw, Sparkles } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
+import { EditAccountModal } from '@/components/account/EditAccountModal';
+import { compressImageFile, MAX_FILE_SIZE_BYTES } from '@/lib/fileCompression';
 
 export const StudentProfilePage: React.FC = () => {
-  const { user, student, refreshUser } = useAuth();
+  const { user, student, refreshUser, updateProfile } = useAuth();
 
   // Editable fields
+  const [firstName, setFirstName] = useState(user?.first_name || '');
+  const [lastName, setLastName] = useState(user?.last_name || '');
+  const [email, setEmail] = useState(user?.email || '');
   const [phone, setPhone] = useState(user?.phone || '');
   const [profilePhotoUrl, setProfilePhotoUrl] = useState(user?.profile_photo_url || '');
   const [isSaved, setIsSaved] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isCompressing, setIsCompressing] = useState(false);
+  const [compressionBadge, setCompressionBadge] = useState<string | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  const handlePhotoUpload = async (file: File) => {
+    setIsCompressing(true);
+    setCompressionBadge(null);
+    try {
+      const res = await compressImageFile(file, { maxSizeBytes: MAX_FILE_SIZE_BYTES });
+      setProfilePhotoUrl(res.dataUrl);
+      setCompressionBadge(
+        res.wasCompressed
+          ? `Auto-compressed: ${res.originalFormatted} → ${res.compressedFormatted} (${res.savingsPercent}% reduction)`
+          : `Optimized: ${res.compressedFormatted} (Under 5 MB)`
+      );
+    } catch (err: unknown) {
+      alert((err as Error).message || 'Failed to compress image.');
+    } finally {
+      setIsCompressing(false);
+    }
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,19 +49,13 @@ export const StudentProfilePage: React.FC = () => {
 
     setLoading(true);
     try {
-      const profiles = localStore.getProfiles();
-      const updated = profiles.map((p) =>
-        p.id === user.id
-          ? {
-              ...p,
-              phone: phone || null,
-              profile_photo_url: profilePhotoUrl || null,
-              updated_at: new Date().toISOString(),
-            }
-          : p
-      );
-      localStore.saveProfiles(updated);
-      await refreshUser();
+      await updateProfile({
+        first_name: firstName.trim() || user.first_name,
+        last_name: lastName.trim() || user.last_name,
+        email: email.trim().toLowerCase() || user.email,
+        phone: phone.trim() || null,
+        profile_photo_url: profilePhotoUrl || null,
+      });
       setIsSaved(true);
       setTimeout(() => setIsSaved(false), 3000);
     } finally {
@@ -135,28 +155,110 @@ export const StudentProfilePage: React.FC = () => {
       {/* Editable Personal & Contact Details */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base font-semibold">
-            Personal & Contact Information
-          </CardTitle>
-          <p className="text-xs text-slate-500">
-            You may update your phone number and profile photo below.
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-base font-semibold">
+                Personal & Contact Information
+              </CardTitle>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Update your name, institutional email, phone number, and profile picture (auto-compressed to &le; 5 MB).
+              </p>
+            </div>
+            <Badge variant="info" className="text-[10px]">Auto-compress &le; 5 MB</Badge>
+          </div>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSave} className="space-y-4">
+            {/* Profile Photo with Compression */}
+            <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 flex flex-col sm:flex-row items-center gap-4">
+              {profilePhotoUrl ? (
+                <img
+                  src={profilePhotoUrl}
+                  alt="Profile"
+                  className="w-16 h-16 rounded-full object-cover ring-2 ring-blue-900/20 shadow-sm"
+                />
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-blue-100 text-blue-950 flex items-center justify-center font-bold text-lg">
+                  {firstName?.[0] || user?.first_name?.[0] || 'S'}
+                  {lastName?.[0] || user?.last_name?.[0] || ''}
+                </div>
+              )}
+              <div className="flex-1 space-y-1 text-center sm:text-left">
+                <div className="text-xs font-semibold text-slate-800">Student Profile Photo</div>
+                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 pt-1">
+                  <label className="cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        if (e.target.files?.[0]) handlePhotoUpload(e.target.files[0]);
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 text-xs pointer-events-none"
+                      disabled={isCompressing}
+                    >
+                      {isCompressing ? (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5 mr-1 animate-spin text-blue-900" />
+                          Compressing...
+                        </>
+                      ) : (
+                        <>
+                          <Camera className="w-3.5 h-3.5 mr-1 text-slate-600" />
+                          Upload & Compress Photo
+                        </>
+                      )}
+                    </Button>
+                  </label>
+                  {profilePhotoUrl && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 text-xs text-slate-500 hover:text-red-600"
+                      onClick={() => {
+                        setProfilePhotoUrl('');
+                        setCompressionBadge(null);
+                      }}
+                    >
+                      Remove
+                    </Button>
+                  )}
+                </div>
+                {compressionBadge && (
+                  <div className="text-[11px] text-emerald-800 bg-emerald-50 border border-emerald-200 rounded p-1 flex items-center space-x-1 mt-1">
+                    <Sparkles className="w-3 h-3 text-emerald-600 shrink-0" />
+                    <span>{compressionBadge}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
                   Legal First Name
                 </label>
-                <Input value={user?.first_name || ''} disabled className="bg-slate-50" />
-                <span className="text-[10px] text-slate-400">Name modifications require registrar approval.</span>
+                <Input
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  className="bg-white text-xs h-9"
+                />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
                   Legal Last Name
                 </label>
-                <Input value={user?.last_name || ''} disabled className="bg-slate-50" />
+                <Input
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  className="bg-white text-xs h-9"
+                />
               </div>
             </div>
 
@@ -164,7 +266,12 @@ export const StudentProfilePage: React.FC = () => {
               <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
                 College Email Address
               </label>
-              <Input value={user?.email || ''} disabled className="bg-slate-50 font-mono" />
+              <Input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="bg-white font-mono text-xs h-9"
+              />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -176,23 +283,25 @@ export const StudentProfilePage: React.FC = () => {
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="+63 917 123 4567"
+                  className="text-xs h-9"
                 />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                  Profile Photo URL
+                  Photo URL (Optional Direct Link)
                 </label>
                 <Input
                   value={profilePhotoUrl}
                   onChange={(e) => setProfilePhotoUrl(e.target.value)}
                   placeholder="https://..."
+                  className="text-xs h-9"
                 />
               </div>
             </div>
 
             <div className="flex justify-end pt-3 border-t border-slate-100">
-              <Button type="submit" isLoading={loading}>
-                Save Contact Updates
+              <Button type="submit" isLoading={loading} size="sm">
+                Save Account Updates
               </Button>
             </div>
           </form>
